@@ -1,6 +1,6 @@
 ## Clock constraints
 # Set the fastest clock speed you may use in your project
-create_clock -name wr_clk -period 4.000 [get_ports wr_clk]   ;# 250 MHz
+create_clock -name wr_clk -period 5.000 [get_ports wr_clk]   ;# 200 MHz
 create_clock -name rd_clk -period 10.000 [get_ports rd_clk]   ;# 100 MHz
 
 ## Clock groups: prevent Vivado from timing between async domains
