@@ -96,7 +96,7 @@ int main(int argc, char **argv)
                 }
 
                 // Data integrity check
-                if (top->rd_en && !top->empty)
+                if (top->rd_valid)
                 {
                     if (top->rd_data != expected_data)
                     {
