@@ -8,3 +8,9 @@ clock-domain crossing issues.
 ## Requirements
 
 This project requires verilator and a tool to display the simulations. There are either gtkwave or surfer project that I would recommend.
+
+
+## Stuff
+
+Run the synthesis check in vivado
+vivado -mode batch -source synth_async_fifo_project.tcl
