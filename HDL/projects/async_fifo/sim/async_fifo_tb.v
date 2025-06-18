@@ -1,11 +1,10 @@
-// async_fifo_tb.v
-
 `timescale 1ns/1ps
 
 module async_fifo_tb;
 
     localparam DATA_WIDTH = 16;
-    localparam ADDR_WIDTH = 4;
+    localparam ADDR_WIDTH = 5;
+    localparam MAX_COUNT = 32;
 
     reg wr_clk = 0;
     reg wr_rst_n = 0;
@@ -16,12 +15,13 @@ module async_fifo_tb;
 
     reg rd_clk = 0;
     reg rd_rst_n = 0;
+    reg rd_en = 0;
     wire [DATA_WIDTH-1:0] rd_data;
     wire rd_valid;
-    reg rd_en = 0;
     wire empty;
     wire almost_empty;
 
+    // Instantiate DUT
     async_fifo #(
         .DATA_WIDTH(DATA_WIDTH),
         .ADDR_WIDTH(ADDR_WIDTH)
@@ -42,44 +42,84 @@ module async_fifo_tb;
         .almost_empty(almost_empty)
     );
 
-    // Write clock: 10ns period (100 MHz)
-    always #5 wr_clk = ~wr_clk;
+    // Clock generation
+    always #5 wr_clk = ~wr_clk;   // 100 MHz
+    always #6 rd_clk = ~rd_clk;   // ~83 MHz
 
-    // Read clock: 12ns period (~83.3 MHz)
-    always #6 rd_clk = ~rd_clk;
+    // Counters and expected data
+    integer wr_count = 0;
+    integer rd_count = 0;
+    reg [DATA_WIDTH-1:0] expected_data = 0;
 
+    // Reset sequence
     initial begin
-        $dumpfile("fifo_tb.vcd");
-        $dumpvars(0, async_fifo_tb);
+        wr_rst_n = 0;
+        rd_rst_n = 0;
+        #20;
+        wr_rst_n = 1;
+        rd_rst_n = 1;
+    end
 
-        #0  wr_rst_n = 0; rd_rst_n = 0;
-        #20 wr_rst_n = 1; rd_rst_n = 1;
-
-        // Write 20 values into FIFO
-        repeat (20) begin
-            @(posedge wr_clk);
-            if (!full) begin
+    // Write process
+    always @(posedge wr_clk) begin
+        if (wr_rst_n) begin
+            if (wr_count < MAX_COUNT && !full) begin
                 wr_en <= 1;
-                wr_data <= wr_data + 1;
+                wr_data <= wr_count[DATA_WIDTH-1:0];
+                wr_count <= wr_count + 1;
             end else begin
                 wr_en <= 0;
             end
         end
-        wr_en <= 0;
+    end
 
-        // Wait a few cycles
-        repeat (10) @(posedge wr_clk);
-
-        // Begin reading
-        repeat (25) begin
-            @(posedge rd_clk);
+    // Read process
+    always @(posedge rd_clk) begin
+        if (rd_rst_n) begin
             rd_en <= ~empty;
+        end else begin
+            rd_en <= 0;
         end
-        rd_en <= 0;
+    end
 
-        // End simulation
-        repeat (10) @(posedge rd_clk);
+    // Verification
+    always @(posedge rd_clk) begin
+        if (rd_valid) begin
+            if (rd_data !== expected_data) begin
+                $display("❌ ERROR: Data mismatch at time %t: expected %0d, got %0d",
+                         $time, expected_data, rd_data);
+                $fatal;
+            end else begin
+                $display("✅ Read %0d at time %t", rd_data, $time);
+                expected_data <= expected_data + 1;
+                rd_count <= rd_count + 1;
+            end
+        end
+    end
+
+    // Monitor flags
+    always @(posedge wr_clk) begin
+        if (wr_en && full)
+            $display("⚠️  WARNING: FIFO full while writing at time %t", $time);
+    end
+
+    always @(posedge rd_clk) begin
+        if (rd_en && empty)
+            $display("⚠️  WARNING: FIFO empty while reading at time %t", $time);
+    end
+
+    // Finish condition
+    initial begin
+        wait (rd_count == MAX_COUNT);
+        #20;
+        $display("🎉 PASS: All data transferred correctly.");
         $finish;
     end
-endmodule
 
+    // VCD trace
+    initial begin
+        $dumpfile("fifo_tb.vcd");
+        $dumpvars(0, async_fifo_tb);
+    end
+
+endmodule
