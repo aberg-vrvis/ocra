@@ -33,14 +33,14 @@ PR 7, 20		// enable gradient offsets
 PR 11, 100
 PR 5, 100	// Flip RF Pulse
 PR 11, 10
-PR 3, 4020	// Pause
+PR 3, 34020	// Pause
 GRADOFFSET 2
 PR 7, 210
 PR 3, 400	// Crusher length
 GRADOFFSET 22
 PR 7, 110
 PR 12, 100
-TXOFFSET 0 
+TXOFFSET 0
 PR 5, 200	// 180deg RF Pulse
 GRADOFFSET 42
 PR 12, 10
@@ -48,15 +48,16 @@ PR 7, 200
 PR 3, 400	// Crusher length
 GRADOFFSET 62
 PR 7, 210
-PR 3, 2080	// Pause
-PR 4, 4000	// Sampling window
-PR 4, 2080	// Pause
+PR 3, 24080	// Pause
+PR 4, 20000	// Sampling window
+PR 4, 24080	// Pause
 GRADOFFSET 2
 PR 8, 210
 PR 4, 400	// Crusher length
 GRADOFFSET 22
 PR 8, 110
 PR 13, 100
+TXOFFSET 5000
 PR 6, 200	// 180deg RF Pulse
 GRADOFFSET 42
 PR 13, 10
@@ -64,15 +65,16 @@ PR 8, 200
 PR 4, 400	// Crusher length
 GRADOFFSET 62
 PR 8, 210
-PR 4, 2080	// Pause
-PR 4, 4000	// Sampling window
-PR 4, 2080	// Pause
+PR 4, 24080	// Pause
+PR 4, 20000	// Sampling window
+PR 4, 24080	// Pause
 GRADOFFSET 2
 PR 8, 210
 PR 4, 400	// Crusher length
 GRADOFFSET 22
 PR 8, 110
 PR 13, 100
+TXOFFSET 0
 PR 6, 200	// 180deg RF Pulse
 GRADOFFSET 42
 PR 13, 10
@@ -80,15 +82,16 @@ PR 8, 200
 PR 4, 400	// Crusher length
 GRADOFFSET 62
 PR 8, 210
-PR 4, 2080	// Pause
-PR 4, 4000	// Sampling window
-PR 4, 2080	// Pause
+PR 4, 24080	// Pause
+PR 4, 20000	// Sampling window
+PR 4, 24080	// Pause
 GRADOFFSET 2
 PR 8, 210
 PR 4, 400	// Crusher length
 GRADOFFSET 22
 PR 8, 110
 PR 13, 100
+TXOFFSET 5000
 PR 6, 200	// 180deg RF Pulse
 GRADOFFSET 42
 PR 13, 10
@@ -96,8 +99,8 @@ PR 8, 200
 PR 4, 400	// Crusher length
 GRADOFFSET 62
 PR 8, 210
-PR 4, 2080	// Pause
-PR 4, 4000	// Sampling window
+PR 4, 24080	// Pause
+PR 4, 20000	// Sampling window
 GRADOFFSET 82
 PR 8, 210
 PR 4, 1000	// Spoiler length

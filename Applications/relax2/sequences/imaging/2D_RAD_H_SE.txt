@@ -33,7 +33,7 @@ PR 7, 20		// enable gradient offsets
 PR 11, 100
 PR 5, 100	// Flip RF Pulse
 PR 11, 10
-PR 3, 4020	// Pause
+PR 3, 5020	// Pause
 GRADOFFSET 82
 PR 7, 210
 PR 3, 400	// Crusher length
@@ -48,7 +48,7 @@ PR 7, 200
 PR 3, 400	// Crusher length
 GRADOFFSET 142
 PR 7, 210
-PR 3, 2860	// Pause
+PR 3, 3860	// Pause
 GRADOFFSET 42
 PR 7, 100
 PR 8, 110

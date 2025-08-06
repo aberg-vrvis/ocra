@@ -30,7 +30,7 @@ NOP   // A[1C] UNUSED
 TXOFFSET 1000 							// A[1D] TXOFFSET 0: RF 90x+				"JNZ here"
 GRADOFFSET 0 						// A[1E] GRADOFFSET
 PR 7, 20		// enable gradient offsets
-PR 6, 100	// Flip RF Pulse
+PR 6, 1600	// 180deg RF Pulse
 PR 4, 200000
 DEC 2 										// A[27] DEC R[2]
 JNZ 2, 0x1D 								// A[28] JNZ R[2] => `PC=0x1D

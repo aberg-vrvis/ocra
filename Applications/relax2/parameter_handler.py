@@ -81,6 +81,7 @@ class Parameters:
         self.inhomogeneity = 0
         self.centerfrequency = 1
         self.kspace = []
+        self.kspaceradial = []
         self.k_amp = []
         self.k_pha = []
         self.img = []
@@ -237,6 +238,12 @@ class Parameters:
         self.toolautosequence = 0
         self.image_grid = 0
         self.projection3D = 0
+        self.projection3D_quality = 0
+        self.TIstepping = 0
+        self.TEstepping = 0
+        self.PB_marker_isocenter_distance = 120
+        self.Ref_PB_marker_isocenter_distance = 120
+        self.PB_isocenter_position = 0
 
     def saveFileParameter(self):  
         with open('parameters.pkl', 'wb') as file:
@@ -414,7 +421,13 @@ class Parameters:
                          self.measurement_time_dialog, \
                          self.toolautosequence, \
                          self.image_grid, \
-                         self.projection3D], file)
+                         self.projection3D, \
+                         self.projection3D_quality, \
+                         self.TIstepping, \
+                         self.TEstepping, \
+                         self.PB_marker_isocenter_distance, \
+                         self.Ref_PB_marker_isocenter_distance, \
+                         self.PB_isocenter_position], file)
        
         print('Parameters saved!')
         
@@ -427,6 +440,7 @@ class Parameters:
                          self.freqencyaxis, \
                          self.spectrumfft, \
                          self.kspace, \
+                         self.kspaceradial, \
                          self.k_amp, \
                          self.k_pha, \
                          self.img, \
@@ -651,7 +665,13 @@ class Parameters:
                 self.measurement_time_dialog, \
                 self.toolautosequence, \
                 self.image_grid, \
-                self.projection3D = pickle.load(file)
+                self.projection3D, \
+                self.projection3D_quality, \
+                self.TIstepping, \
+                self.TEstepping, \
+                self.PB_marker_isocenter_distance, \
+                self.Ref_PB_marker_isocenter_distance, \
+                self.PB_isocenter_position = pickle.load(file)
              
                 print('Internal GUI parameter successfully restored from file.')
                 
@@ -669,6 +689,7 @@ class Parameters:
                 self.freqencyaxis, \
                 self.spectrumfft, \
                 self.kspace, \
+                self.kspaceradial, \
                 self.k_amp, \
                 self.k_pha, \
                 self.img, \
@@ -889,6 +910,12 @@ class Parameters:
         # file.write(': ' + str(self.toolautosequence) + '\n')
         # file.write(': ' + str(self.image_grid) + '\n')
         # file.write(': ' + str(self.projection3D) + '\n')
+        # file.write(': ' + str(self.projection3D_quality) + '\n')
+        file.write('TI stepping: ' + str(self.TIstepping) + '\n')
+        file.write('TE stepping: ' + str(self.TEstepping) + '\n')
+        # file.write(': ' + str(self.PB_marker_isocenter_distance) + '\n')
+        # file.write(': ' + str(self.Ref_PB_marker_isocenter_distance) + '\n')
+        # file.write(': ' + str(self.PB_isocenter_position) + '\n')
         
         file.close()
 
@@ -1004,7 +1031,10 @@ class Parameters:
             'Motor Autocenter position [mm]': self.motor_AC_position,
             'Motor Autocenter position keep in center': self.motor_AC_position_center,
             'Motor Autocenter In-between': self.motor_AC_inbetween,
-            'Motor Autocenter In-between Image Step': self.motor_AC_inbetween_step
+            'Motor Autocenter In-between Image Step': self.motor_AC_inbetween_step,
+            'TI stepping': self.TIstepping,
+            'TE stepping': self.TEstepping
+            
         }
 
         out_file = open(filename, 'w')

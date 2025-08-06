@@ -33,13 +33,13 @@ PR 7, 20		// enable gradient offsets
 PR 11, 100
 PR 5, 200	// 180deg RF Pulse
 PR 11, 10
-PR 3, 1740	// Pause
+PR 3, 4999740	// Pause
 PR 11, 100
 TXOFFSET 500
 PR 5, 100	// Flip RF Pulse
 PR 11, 10
-PR 3, 14450	// Pause
-PR 4, 1000	// Sampling window
+PR 3, 1950	// Pause
+PR 4, 20000	// Sampling window
 GRADOFFSET 2
 PR 8, 210
 PR 4, 1000	// Spoiler length

@@ -34,14 +34,14 @@ PR 3, 0
 GRADOFFSET 82						// A[1E] GRADOFFSET
 PR 7, 110
 PR 12, 100
-PR 5, 800	// Flip RF Pulse
+PR 5, 400	// Flip RF Pulse
 GRADOFFSET 102
 PR 12, 10
 PR 7, 400
-PR 3, 800	// Slice rephaser length
+PR 3, 400	// Slice rephaser length
 GRADOFFSET 142
 PR 7, 210
-PR 3, 6145	// Pause
+PR 3, 2555	// Pause
 GRADOFFSET 162
 PR 7, 210
 PR 3, 400	// Crusher length
@@ -49,20 +49,20 @@ GRADOFFSET 182
 PR 7, 110
 PR 12, 100
 TXOFFSET 1000 
-PR 5, 1600	// 180deg RF Pulse
+PR 5, 800	// 180deg RF Pulse
 GRADOFFSET 202
 PR 12, 10
 PR 7, 200
 PR 3, 400	// Crusher length
 GRADOFFSET 222
 PR 7, 210
-PR 3, 0	// Pause
+PR 3, 310	// Pause
 GRADOFFSET 2
 PR 7, 210
-PR 3, 2350	// Readout prephaser length
+PR 3, 850	// Readout prephaser length
 GRADOFFSET 22
 PR 7, 410
-PR 4, 10000	// Sampling window
+PR 4, 4000	// Sampling window
 GRADOFFSET 62
 PR 8, 210
 PR 4, 0
