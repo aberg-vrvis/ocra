@@ -2233,6 +2233,55 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>Tool_Auto_Sequence_radioButton</tabstop>
+  <tabstop>AC_Start_Frequency_doubleSpinBox</tabstop>
+  <tabstop>AC_Stop_Frequency_doubleSpinBox</tabstop>
+  <tabstop>AC_Stepwidth_spinBox</tabstop>
+  <tabstop>Autocenter_pushButton</tabstop>
+  <tabstop>AC_Reffrequency_lineEdit</tabstop>
+  <tabstop>FA_Start_Attenuation_doubleSpinBox</tabstop>
+  <tabstop>FA_Stop_Attenuation_doubleSpinBox</tabstop>
+  <tabstop>FA_Attenuation_Steps_spinBox</tabstop>
+  <tabstop>Flipangle_pushButton</tabstop>
+  <tabstop>FA_RefRFattenuation_lineEdit</tabstop>
+  <tabstop>Flip_Angle_Check_pushButton</tabstop>
+  <tabstop>Tool_Shim_Start_spinBox</tabstop>
+  <tabstop>Tool_Shim_Stop_spinBox</tabstop>
+  <tabstop>Tool_Shim_Steps_spinBox</tabstop>
+  <tabstop>Tool_Shim_X_radioButton</tabstop>
+  <tabstop>Tool_Shim_X_Ref_lineEdit</tabstop>
+  <tabstop>Tool_Shim_Y_radioButton</tabstop>
+  <tabstop>Tool_Shim_Y_Ref_lineEdit</tabstop>
+  <tabstop>Tool_Shim_Z_radioButton</tabstop>
+  <tabstop>Tool_Shim_Z_Ref_lineEdit</tabstop>
+  <tabstop>Tool_Shim_Z2_radioButton</tabstop>
+  <tabstop>Tool_Shim_Z2_Ref_lineEdit</tabstop>
+  <tabstop>Tool_Shim_pushButton</tabstop>
+  <tabstop>Tool_Auto_Shim_Rough_radioButton</tabstop>
+  <tabstop>Tool_Auto_Shim_Fine_radioButton</tabstop>
+  <tabstop>Tool_Auto_Shim_pushButton</tabstop>
+  <tabstop>Field_Map_Gradient_pushButton</tabstop>
+  <tabstop>Field_Map_Gradient_Slice_pushButton</tabstop>
+  <tabstop>GradientScaling_XNominal_doubleSpinBox</tabstop>
+  <tabstop>GradientScaling_XMeasured_doubleSpinBox</tabstop>
+  <tabstop>Gradient_XScaling_lineEdit</tabstop>
+  <tabstop>GradientScaling_YNominal_doubleSpinBox</tabstop>
+  <tabstop>GradientScaling_YMeasured_doubleSpinBox</tabstop>
+  <tabstop>Gradient_YScaling_lineEdit</tabstop>
+  <tabstop>GradientScaling_ZNominal_doubleSpinBox</tabstop>
+  <tabstop>GradientScaling_ZMeasured_doubleSpinBox</tabstop>
+  <tabstop>Gradient_ZScaling_lineEdit</tabstop>
+  <tabstop>Field_Map_B0_pushButton</tabstop>
+  <tabstop>Field_Map_B0_Slice_pushButton</tabstop>
+  <tabstop>Field_Map_B1_pushButton</tabstop>
+  <tabstop>Field_Map_B1_Slice_pushButton</tabstop>
+  <tabstop>PB_Marker_Cal_pushButton</tabstop>
+  <tabstop>PB_Marker_Cal_MIC_Dist_lineEdit</tabstop>
+  <tabstop>ErnstAngleCalculator_T1_spinBox</tabstop>
+  <tabstop>ErnstAngleCalculator_TR_spinBox</tabstop>
+  <tabstop>ErnstAngleCalculator_ErnstAngle_lineEdit</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

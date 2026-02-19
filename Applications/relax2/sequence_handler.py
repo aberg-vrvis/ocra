@@ -1122,7 +1122,7 @@ class sequence:
     def rf_loopback_test_rect_flip_setup(self):
         f = open(self.seq_rf_loopback_test_rect_flip, 'r+')
         lines = f.readlines()
-        lines[-5] = 'PR 6, ' + str(int(params.flippulselength)) + '\t// Flip RF Pulse\n'
+        lines[-6] = 'PR 6, ' + str(int(params.flippulselength)) + '\t// Flip RF Pulse\n'
         f.close()
         with open(self.seq_rf_loopback_test_rect_flip, 'w') as out_file:
             for line in lines:
@@ -1135,7 +1135,7 @@ class sequence:
     def rf_loopback_test_rect_180_setup(self):
         f = open(self.seq_rf_loopback_test_rect_180, 'r+')
         lines = f.readlines()
-        lines[-5] = 'PR 6, ' + str(int(2*params.RFpulselength)) + '\t// 180deg RF Pulse\n'
+        lines[-6] = 'PR 6, ' + str(int(2*params.RFpulselength)) + '\t// 180deg RF Pulse\n'
         f.close()
         with open(self.seq_rf_loopback_test_rect_180, 'w') as out_file:
             for line in lines:
@@ -1148,7 +1148,7 @@ class sequence:
     def rf_loopback_test_sinc_flip_setup(self):
         f = open(self.seq_rf_loopback_test_sinc_flip, 'r+')
         lines = f.readlines()
-        lines[-5] = 'PR 6, ' + str(int(4*params.flippulselength)) + '\t// Flip RF Pulse\n'
+        lines[-6] = 'PR 6, ' + str(int(4*params.flippulselength)) + '\t// Flip RF Pulse\n'
         f.close()
         with open(self.seq_rf_loopback_test_sinc_flip, 'w') as out_file:
             for line in lines:
@@ -1161,7 +1161,7 @@ class sequence:
     def rf_loopback_test_sinc_180_setup(self):
         f = open(self.seq_rf_loopback_test_sinc_180, 'r+')
         lines = f.readlines()
-        lines[-5] = 'PR 6, ' + str(int(2*4*params.RFpulselength)) + '\t// 180deg RF Pulse\n'
+        lines[-6] = 'PR 6, ' + str(int(2*4*params.RFpulselength)) + '\t// 180deg RF Pulse\n'
         f.close()
         with open(self.seq_rf_loopback_test_sinc_180, 'w') as out_file:
             for line in lines:
@@ -1174,7 +1174,7 @@ class sequence:
     def rf_loopback_test_rect_flip_inv_setup(self):
         f = open(self.seq_rf_loopback_test_rect_flip_inv, 'r+')
         lines = f.readlines()
-        lines[-5] = 'PR 6, ' + str(int(params.flippulselength)) + '\t// Flip RF Pulse\n'
+        lines[-6] = 'PR 6, ' + str(int(params.flippulselength)) + '\t// Flip RF Pulse\n'
         f.close()
         with open(self.seq_rf_loopback_test_rect_flip_inv, 'w') as out_file:
             for line in lines:
@@ -1187,7 +1187,7 @@ class sequence:
     def rf_loopback_test_rect_180_inv_setup(self):
         f = open(self.seq_rf_loopback_test_rect_180_inv, 'r+')
         lines = f.readlines()
-        lines[-5] = 'PR 6, ' + str(int(2*params.RFpulselength)) + '\t// 180deg RF Pulse\n'
+        lines[-6] = 'PR 6, ' + str(int(2*params.RFpulselength)) + '\t// 180deg RF Pulse\n'
         f.close()
         with open(self.seq_rf_loopback_test_rect_180_inv, 'w') as out_file:
             for line in lines:
@@ -1200,7 +1200,7 @@ class sequence:
     def rf_loopback_test_sinc_flip_inv_setup(self):
         f = open(self.seq_rf_loopback_test_sinc_flip_inv, 'r+')
         lines = f.readlines()
-        lines[-5] = 'PR 6, ' + str(int(4*params.flippulselength)) + '\t// Flip RF Pulse\n'
+        lines[-6] = 'PR 6, ' + str(int(4*params.flippulselength)) + '\t// Flip RF Pulse\n'
         f.close()
         with open(self.seq_rf_loopback_test_sinc_flip_inv, 'w') as out_file:
             for line in lines:
@@ -1213,7 +1213,7 @@ class sequence:
     def rf_loopback_test_sinc_180_inv_setup(self):
         f = open(self.seq_rf_loopback_test_sinc_180_inv, 'r+')
         lines = f.readlines()
-        lines[-5] = 'PR 6, ' + str(int(2*4*params.RFpulselength)) + '\t// 180deg RF Pulse\n'
+        lines[-6] = 'PR 6, ' + str(int(2*4*params.RFpulselength)) + '\t// 180deg RF Pulse\n'
         f.close()
         with open(self.seq_rf_loopback_test_sinc_180_inv, 'w') as out_file:
             for line in lines:
@@ -2170,7 +2170,7 @@ class sequence:
         if params.sequence == 0: self.estimated_time = self.avecount * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 14, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, 0, params.spoileramplitude))
 
@@ -2183,7 +2183,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2196,12 +2196,14 @@ class sequence:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-10)/1000)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
                 time.sleep(0.01)
             
         params.timeaxis = np.linspace(0, params.TS, self.data_idx)
@@ -2234,7 +2236,7 @@ class sequence:
         if params.sequence == 4 or params.sequence == 5: self.estimated_time = self.avecount * ((100 + params.flippulselength/2 + params.SIR_TE*1000 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 15, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, 0, params.spoileramplitude << 16 | params.crusheramplitude))
 
@@ -2247,7 +2249,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2264,12 +2266,14 @@ class sequence:
                 
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-10)/1000)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
                 time.sleep(0.01)
             
         params.timeaxis = np.linspace(0, params.TS, self.data_idx)
@@ -2299,7 +2303,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,4*self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 25, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.GROamplitude, params.spoileramplitude))
 
@@ -2312,7 +2316,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2352,7 +2356,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,4*self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 26, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.GROamplitude, params.spoileramplitude << 16| params.crusheramplitude))
 
@@ -2365,7 +2369,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2407,7 +2411,7 @@ class sequence:
         self.estimated_time = self.avecount * ((100 + params.flippulselength/2 + 4*params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 15, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, 0, params.spoileramplitude << 16 | params.crusheramplitude))
 
@@ -2420,7 +2424,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2444,12 +2448,14 @@ class sequence:
                 
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-10)/1000)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
                 time.sleep(0.01)
             
         params.timeaxis = np.linspace(0, 4*params.TS, 4*self.data_idx)
@@ -2480,7 +2486,7 @@ class sequence:
         if params.sequence == 9: self.estimated_time = self.avecount * ((100 + 2*params.flippulselength + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
 
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 18, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.GSamplitude, params.spoileramplitude))
 
@@ -2493,7 +2499,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2507,12 +2513,14 @@ class sequence:
                 
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-10)/1000)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
                 time.sleep(0.01)
             
         params.timeaxis = np.linspace(0, params.TS, self.data_idx)
@@ -2544,7 +2552,7 @@ class sequence:
         if params.sequence == 11 or params.sequence == 12: self.estimated_time = self.avecount * ((100 + 4*params.RFpulselength + params.TI*1000 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
 
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 19, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.GSamplitude, params.spoileramplitude << 16 | params.crusheramplitude))
 
@@ -2557,7 +2565,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2572,12 +2580,14 @@ class sequence:
                 
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-10)/1000)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
                 time.sleep(0.01)
             
         params.timeaxis = np.linspace(0, params.TS, self.data_idx)
@@ -2608,7 +2618,7 @@ class sequence:
         self.estimated_time = self.avecount * ((100 + 2*params.flippulselength + params.SIR_TE*1000 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 27, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.GSamplitude, params.spoileramplitude << 16 | params.crusheramplitude))
 
@@ -2621,7 +2631,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2635,12 +2645,14 @@ class sequence:
                 
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-10)/1000)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
                 time.sleep(0.01)
             
         params.timeaxis = np.linspace(0, params.TS, self.data_idx)
@@ -2670,7 +2682,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,4*self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 28, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.GROamplitude << 16 | params.GSamplitude, params.spoileramplitude))
 
@@ -2683,7 +2695,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2723,7 +2735,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,4*self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 29, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.GROamplitude << 16 | params.GSamplitude, params.spoileramplitude << 16 | params.crusheramplitude))
 
@@ -2736,7 +2748,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2778,7 +2790,7 @@ class sequence:
         self.estimated_time = self.avecount * ((100 + 2*params.flippulselength + 4*params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 19, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.GSamplitude, params.spoileramplitude << 16 | params.crusheramplitude))
 
@@ -2791,7 +2803,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2812,12 +2824,14 @@ class sequence:
                 
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('Averaging... ' + str(n+1) + '/' + str(self.avecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-10)/1000)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
                 time.sleep(0.01)
             
         params.timeaxis = np.linspace(0, 4*params.TS, 4*self.data_idx)
@@ -2846,7 +2860,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 20, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, 0, 0))
 
@@ -2859,7 +2873,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2895,7 +2909,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 20, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, 0, 0))
 
@@ -2908,7 +2922,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2944,7 +2958,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 20, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, 0, 0))
 
@@ -2957,7 +2971,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -2993,7 +3007,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 20, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, 0, 0))
 
@@ -3006,7 +3020,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3042,7 +3056,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', 33, 0, 0, 0, 0, 0, 0, 0, 0, params.spoileramplitude))
 
@@ -3055,7 +3069,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3092,7 +3106,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 40, 0, params.RFpulselength, 0, 0, 0, 0, 0, 0, 0))
 
@@ -3105,7 +3119,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3158,7 +3172,7 @@ class sequence:
                 self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
                 for n in range(self.avecount):
-                    print('Average: ',n+1,'/',self.avecount)
+                    print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
                     socket.write(struct.pack('<IIIIIIIIII', self.ax << 16 | 16, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.spoileramplitude << 16, params.Gproj[self.ax]))
 
@@ -3171,7 +3185,7 @@ class sequence:
                         datasize = socket.bytesAvailable()
                         time.sleep(0.0001)
                         if datasize == 8*params.samples:
-                            print('Readout finished : ', int(datasize/8), 'Samples')
+                            print('Readout finished: ', int(datasize/8), 'Samples')
                             self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                             break
                         else: continue
@@ -3227,7 +3241,7 @@ class sequence:
                 self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
                 for n in range(self.avecount):
-                    print('Average: ',n+1,'/',self.avecount)
+                    print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
                     socket.write(struct.pack('<IIIIIIIIII', self.ax << 16 | 17, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.spoileramplitude << 16 | params.crusheramplitude, params.Gproj[self.ax]))
 
@@ -3240,7 +3254,7 @@ class sequence:
                         datasize = socket.bytesAvailable()
                         time.sleep(0.0001)
                         if datasize == 8*params.samples:
-                            print('Readout finished : ', int(datasize/8), 'Samples')
+                            print('Readout finished: ', int(datasize/8), 'Samples')
                             self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                             break
                         else: continue
@@ -3305,7 +3319,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 31, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, 0, params.spoileramplitude << 16 | params.projectionangleradmod100, self.GRO2 << 16 | self.GRO1))
 
@@ -3318,7 +3332,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3380,7 +3394,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 30, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, params.projectionangleradmod100, params.spoileramplitude << 16 | params.crusheramplitude, self.GRO2 << 16 | self.GRO1))
 
@@ -3393,7 +3407,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3446,7 +3460,7 @@ class sequence:
                 self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
                 for n in range(self.avecount):
-                    print('Average: ',n+1,'/',self.avecount)
+                    print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
                     socket.write(struct.pack('<IIIIIIIIII', self.ax << 16 | 36, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, params.GSamplitude << 16, params.spoileramplitude << 16, params.Gproj[self.ax]))
 
@@ -3459,7 +3473,7 @@ class sequence:
                         datasize = socket.bytesAvailable()
                         time.sleep(0.0001)
                         if datasize == 8*params.samples:
-                            print('Readout finished : ', int(datasize/8), 'Samples')
+                            print('Readout finished: ', int(datasize/8), 'Samples')
                             self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                             break
                         else: continue
@@ -3515,7 +3529,7 @@ class sequence:
                 self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
                 for n in range(self.avecount):
-                    print('Average: ',n+1,'/',self.avecount)
+                    print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
                     socket.write(struct.pack('<IIIIIIIIII', self.ax << 16 | 37, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, params.GSamplitude << 16, params.spoileramplitude << 16 | params.crusheramplitude, params.Gproj[self.ax]))
 
@@ -3528,7 +3542,7 @@ class sequence:
                         datasize = socket.bytesAvailable()
                         time.sleep(0.0001)
                         if datasize == 8*params.samples:
-                            print('Readout finished : ', int(datasize/8), 'Samples')
+                            print('Readout finished: ', int(datasize/8), 'Samples')
                             self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                             break
                         else: continue
@@ -3593,7 +3607,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 38, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, params.GSamplitude << 16, params.spoileramplitude << 16 | params.projectionangleradmod100, self.GRO2 << 16 | self.GRO1))
 
@@ -3606,7 +3620,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3668,7 +3682,7 @@ class sequence:
         self.spectrumdata = np.matrix(np.zeros((self.avecount,self.data_idx), dtype = np.complex64))
         
         for n in range(self.avecount):
-            print('Average: ',n+1,'/',self.avecount)
+            print('Averaging... ' + str(n+1) + '/' + str(self.avecount))
         
             socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 39, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, 0, params.GSamplitude << 16 | params.projectionangleradmod100, params.spoileramplitude << 16 | params.crusheramplitude, self.GRO2 << 16 | self.GRO1))
 
@@ -3681,7 +3695,7 @@ class sequence:
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ', int(datasize/8), 'Samples')
+                    print('Readout finished: ', int(datasize/8), 'Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3717,6 +3731,7 @@ class sequence:
         if params.GUImode == 5 and params.sequence == 0: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * params.nPE * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         if params.GUImode == 5 and params.sequence == 1: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * params.nPE * ((100 + params.RFpulselength + params.TI*1000 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
 
+        if params.GUImode == 5: print('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count))
         
         socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 8, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, params.spoileramplitude << 16, params.GPEstep, params.GROamplitude << 16 | params.nPE, params.TR))
 
@@ -3724,13 +3739,14 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(params.nPE):
-            print(n+1,'/',params.nPE)
+            if params.GUImode == 5: print('Total: ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE))
+            print('Measuring... ' + str(n+1) + '/' + str(params.nPE))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3747,13 +3763,17 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
-                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nMeasuring... ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nTotal: ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE) + '\nMeasuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                if params.GUImode == 1: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -3780,20 +3800,23 @@ class sequence:
         if params.GUImode == 1 and params.sequence == 9: self.estimated_time = params.nPE * ((100 + params.flippulselength/2 + params.SIR_TE*1000 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         if params.GUImode == 5 and params.sequence == 2: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * params.nPE * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         if params.GUImode == 5 and params.sequence == 3: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * params.nPE * ((100 + params.RFpulselength + params.TI*1000 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
-
+        
+        if params.GUImode == 5: print('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count))
+        
         socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 9, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, params.spoileramplitude << 16 | params.crusheramplitude, params.GPEstep, params.GROamplitude << 16 | params.nPE, params.TR))
 
         while(True):
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(params.nPE):
-            print(n+1,'/',params.nPE)
+            if params.GUImode == 5: print('Total: ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE))
+            print('Measuring... ' + str(n+1) + '/' + str(params.nPE))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3811,13 +3834,17 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
-                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nMeasuring... ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nTotal: ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE) + '\nMeasuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                if params.GUImode == 1: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -3849,13 +3876,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(params.nPE):
-            print(n+1,'/',params.nPE)
+            print('Measuring... ' + str(n+1) + '/' + str(params.nPE))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3868,12 +3895,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         for n in range(int(params.nPE/2)):
             self.kspace[n,:] = self.kspacetemp[2*n,:]
@@ -3906,19 +3936,22 @@ class sequence:
         if params.GUImode == 5 and params.sequence == 5: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * params.nPE * ((100 + 2*params.flippulselength + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         if params.GUImode == 5 and params.sequence == 6: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * params.nPE * ((100 + 4*params.RFpulselength + params.TI*1000 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
 
+        if params.GUImode == 5: print('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count))
+
         socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 10, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, params.spoileramplitude << 16, params.GSamplitude << 16 | params.GPEstep, params.GROamplitude << 16 | params.nPE, params.TR))
 
         while(True):
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(params.nPE):
-            print(n+1,'/',params.nPE)
+            if params.GUImode == 5: print('Total: ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE))
+            print('Measuring... ' + str(n+1) + '/' + str(params.nPE))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3934,13 +3967,17 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
-                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nMeasuring... ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nTotal: ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE) + '\nMeasuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                if params.GUImode == 1: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -3966,20 +4003,23 @@ class sequence:
         if params.GUImode == 1 and params.sequence == 25: self.estimated_time = params.nPE * ((100 + 4*params.RFpulselength + params.TI*1000 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         if params.GUImode == 5 and params.sequence == 7: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * params.nPE * ((100 + 2*params.flippulselength + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         if params.GUImode == 5 and params.sequence == 8: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * params.nPE * ((100 + 4*params.RFpulselength + params.TI*1000 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
-
+        
+        if params.GUImode == 5: print('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count))
+        
         socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 11, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, params.spoileramplitude << 16 | params.crusheramplitude, params.GSamplitude << 16 | params.GPEstep, params.GROamplitude << 16 | params.nPE, params.TR))
 
         while(True):
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(params.nPE):
-            print(n+1,'/',params.nPE)
+            if params.GUImode == 5: print('Total: ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE))
+            print('Measuring... ' + str(n+1) + '/' + str(params.nPE))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -3995,13 +4035,17 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
-                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nMeasuring... ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nTotal: ' + str(params.motor_current_image_count*params.nPE + n+1) + '/' + str(params.motor_image_count*params.nPE) + '\nMeasuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                if params.GUImode == 1: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -4033,13 +4077,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(params.nPE):
-            print(n+1,'/',params.nPE)
+            print('Measuring... ' + str(n+1) + '/' + str(params.nPE))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4052,12 +4096,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         for n in range(int(params.nPE/2)):
             self.kspace[n,:] = self.kspacetemp[2*n,:]
@@ -4087,7 +4134,9 @@ class sequence:
         
         if params.GUImode == 1 and params.sequence == 35: self.estimated_time = params.SPEsteps * params.nPE * ((100 + 2*params.flippulselength + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         if params.GUImode == 5 and params.sequence == 10: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * params.SPEsteps * params.nPE * ((100 + 2*params.flippulselength + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
-
+        
+        if params.GUImode == 5: print('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count))
+        
         socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 12, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, params.spoileramplitude << 16 | params.crusheramplitude, params.SPEsteps << 16 | params.GSPEstep, params.GSamplitude << 16 | params.GPEstep, params.GROamplitude << 16 | params.nPE, params.TR))
 
         while(True):
@@ -4096,13 +4145,14 @@ class sequence:
                 
         for m in range(params.SPEsteps):    
             for n in range(params.nPE):
-                print(n+1+m*params.nPE,'/',params.nPE*params.SPEsteps)
+                if params.GUImode == 5: print('Total: ' + str(params.motor_current_image_count*params.nPE*params.SPEsteps + n+1+m*params.nPE) + '/' + str(params.motor_image_count*params.nPE*params.SPEsteps))
+                print('Measuring... ' + str(n+1+m*params.nPE) + '/' + str(params.nPE*params.SPEsteps))
                 while True:
                     socket.waitForReadyRead()
                     datasize = socket.bytesAvailable()
                     time.sleep(0.0001)
                     if datasize == 8*params.samples:
-                        print('Readout finished : ',int(datasize/8), 'Samples')
+                        print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                         self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                         break
                     else: continue
@@ -4116,13 +4166,17 @@ class sequence:
                 
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1+m*params.nPE) + '/' + str(params.nPE*params.SPEsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
-                    if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nMeasuring... ' + str(params.motor_current_image_count*params.nPE*params.SPEsteps + n+1+m*params.nPE) + '/' + str(params.motor_image_count*params.nPE*params.SPEsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1+m*params.nPE) + '/' + str(params.nPE*params.SPEsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nTotal: ' + str(params.motor_current_image_count*params.nPE*params.SPEsteps + n+1+m*params.nPE) + '/' + str(params.motor_image_count*params.nPE*params.SPEsteps) + '\nMeasuring... ' + str(n+1+m*params.nPE) + '/' + str(params.nPE*params.SPEsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-10)/1000)
+                else:
+                    if params.GUImode == 1: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    if params.GUImode == 5: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
+                time.sleep(0.01)
                 
         params.kspace = self.kspace
         
@@ -4160,13 +4214,13 @@ class sequence:
                 
         for m in range(params.SPEsteps):    
             for n in range(self.nsteps):
-                print(n+1+m*self.nsteps,'/',self.nsteps*params.SPEsteps)
+                print('Measuring... ' + str(n+1+m*self.nsteps) + '/' + str(self.nsteps*params.SPEsteps))
                 while True:
                     socket.waitForReadyRead()
                     datasize = socket.bytesAvailable()
                     time.sleep(0.0001)
                     if datasize == 8*params.samples:
-                        print('Readout finished : ',int(datasize/8), 'Samples')
+                        print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                         self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                         break
                     else: continue
@@ -4182,7 +4236,10 @@ class sequence:
                     msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-10)/1000)
+                else:
+                    print('Measuring... ' + str(n+1+m*self.nsteps) + '/' + str(self.nsteps*params.SPEsteps))
+                    time.sleep((params.TR-10)/1000)
+                time.sleep(0.01)
             
             self.kspace[m,0:int(self.nsteps/2), :] = self.kspacetemp[int(3*self.nsteps):int(3*self.nsteps+self.nsteps/2), :]
             self.kspace[m,int(self.nsteps/2):int(self.nsteps), :] = self.kspacetemp[int(2*self.nsteps):int(2*self.nsteps+self.nsteps/2), :]
@@ -4222,20 +4279,23 @@ class sequence:
 
         if params.GUImode == 1 and params.sequence == 11: self.estimated_time = self.nsteps * ((100 + params.flippulselength/2 + 4*params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         if params.GUImode == 5 and params.sequence == 4: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * self.nsteps * ((100 + params.flippulselength/2 + 4*params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
-
+        
+        if params.GUImode == 5: print('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count))
+        
         socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 21, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, params.spoileramplitude << 16 | params.crusheramplitude, params.GPEstep, params.GROamplitude << 16 | self.nsteps, params.TR))
 
         while(True):
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.nsteps):
-            print(n+1,'/',self.nsteps)
+            if params.GUImode == 5: print('Total: ' + str(params.motor_current_image_count*self.nsteps + n+1) + '/' + str(arams.motor_image_count*self.nsteps))
+            print('Measuring... ' + str(n+1) + '/' + str(self.nsteps))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4253,13 +4313,17 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.nsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
-                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nMeasuring... ' + str(params.motor_current_image_count*self.nsteps + n+1) + '/' + str(arams.motor_image_count*self.nsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.nsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nTotal: ' + str(params.motor_current_image_count*self.nsteps + n+1) + '/' + str(arams.motor_image_count*self.nsteps) + '\nMeasuring... ' + str(n+1) + '/' + str(self.nsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                if params.GUImode == 1: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         self.kspace[0:int(self.nsteps/2), :] = -self.kspacetemp[int(3*self.nsteps):int(3*self.nsteps+self.nsteps/2), :]
         self.kspace[int(self.nsteps/2):int(self.nsteps), :] = self.kspacetemp[int(2*self.nsteps):int(2*self.nsteps+self.nsteps/2), :]
@@ -4301,20 +4365,23 @@ class sequence:
 
         if params.GUImode == 1 and params.sequence == 28: self.estimated_time = self.nsteps * ((100 + 2*params.flippulselength + 4*params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
         if params.GUImode == 5 and params.sequence == 9: self.estimated_time = (params.motor_image_count-1)*params.motor_settling_time*1000 + params.motor_image_count * self.nsteps * ((100 + 2*params.flippulselength + 4*params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
-
+        
+        if params.GUImode == 5: print('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count))
+        
         socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 23, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, 0, params.spoileramplitude << 16 | params.crusheramplitude, params.GSamplitude << 16 | params.GPEstep, params.GROamplitude << 16 | self.nsteps, params.TR))         
 
         while(True):
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.nsteps):
-            print(n+1,'/',self.nsteps)
+            if params.GUImode == 5: print('Total: ' + str(params.motor_current_image_count*self.nsteps + n+1) + '/' + str(params.motor_image_count*self.nsteps))
+            print('Measuring... ' + str(n+1) + '/' + str(self.nsteps))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4331,13 +4398,17 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.nsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
-                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nMeasuring... ' + str(params.motor_current_image_count*self.nsteps + n+1) + '/' + str(params.motor_image_count*self.nsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                if params.GUImode == 1: msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.nsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: msg_box.setText('Position: ' + str(params.motor_current_image_count+1) + '/' + str(params.motor_image_count) + '\nTotal: ' + str(params.motor_current_image_count*self.nsteps + n+1) + '/' + str(params.motor_image_count*self.nsteps) + '\nMeasuring... ' + str(n+1) + '/' + str(self.nsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                if params.GUImode == 1: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                if params.GUImode == 5: print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         self.kspace[0:int(self.nsteps/2), :] = -self.kspacetemp[int(3*self.nsteps):int(3*self.nsteps+self.nsteps/2), :]
         self.kspace[int(self.nsteps/2):int(self.nsteps), :] = self.kspacetemp[int(2*self.nsteps):int(2*self.nsteps+self.nsteps/2), :]
@@ -4392,13 +4463,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.nsteps):
-            print(n+1,'/',self.nsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(self.nsteps))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4417,12 +4488,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.nsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.nsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.kspace = self.kspace
         
@@ -4465,13 +4539,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.nsteps):
-            print(n+1,'/',self.nsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(self.nsteps))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4488,12 +4562,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.nsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.nsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
 #             self.spectrumdata[n,0:self.data_idx] = self.data[self.sampledelay:self.data_idx+self.sampledelay]*params.RXscaling
 #             self.spectrumdata[n,self.data_idx:2*self.data_idx] = self.data[self.data_idx+self.sampledelay+self.EPIdelay:self.sampledelay+self.EPIdelay:-1]*params.RXscaling
@@ -4536,13 +4613,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(params.nPE):
-            print(n+1,'/',params.nPE*2)
+            print('Measuring... ' + str(n+1) + '/' + str(params.nPE*2))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4555,12 +4632,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE*2) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE*2) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
                 
         socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 13, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, params.spoileramplitude << 16 | params.crusheramplitude, params.Gdiffamplitude, params.GPEstep, params.GROamplitude << 16 | params.nPE, params.TR))
 
@@ -4568,13 +4648,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(params.nPE):
-            print(n+1+params.nPE,'/',params.nPE*2)
+            print('Measuring... ' + str(n+1+params.nPE) + '/' + str(params.nPE*2))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4587,12 +4667,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1+params.nPE) + '/' + str(params.nPE*2) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1+params.nPE) + '/' + str(params.nPE*2) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -4622,13 +4705,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(params.nPE):
-            print(n+1,'/',params.nPE*2)
+            print('Measuring... ' + str(n+1) + '/' + str(params.nPE*2))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4641,12 +4724,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE*2) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.nPE*2) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
                 
         socket.write(struct.pack('<IIIIIIIIII', params.imageorientation << 16 | 41, params.flippulseamplitude, params.flippulselength << 16 | params.RFpulselength, params.frequencyoffset, params.frequencyoffsetsign << 16 | params.phaseoffsetradmod100, params.Gdiffamplitude, params.spoileramplitude << 16 | params.crusheramplitude, params.GSamplitude << 16 | params.GPEstep, params.GROamplitude << 16 | params.nPE, params.TR))
 
@@ -4654,13 +4740,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(params.nPE):
-            print(n+1+params.nPE,'/',params.nPE*2)
+            print('Measuring... ' + str(n+1+params.nPE) + '/' + str(params.nPE*2))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4673,12 +4759,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1+params.nPE) + '/' + str(params.nPE*2) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1+params.nPE) + '/' + str(params.nPE*2) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -4730,13 +4819,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.radialanglecount):
-            print(n+1,'/',self.radialanglecount)
+            print('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4749,12 +4838,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -4806,13 +4898,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.radialanglecount):
-            print(n+1,'/',self.radialanglecount)
+            print('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4825,12 +4917,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -4882,13 +4977,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.radialanglecount):
-            print(n+1,'/',self.radialanglecount)
+            print('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4901,12 +4996,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -4958,13 +5056,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.radialanglecount):
-            print(n+1,'/',self.radialanglecount)
+            print('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -4977,12 +5075,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -5034,13 +5135,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.radialanglecount):
-            print(n+1,'/',self.radialanglecount)
+            print('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -5053,12 +5154,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -5110,13 +5214,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.radialanglecount):
-            print(n+1,'/',self.radialanglecount)
+            print('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -5129,12 +5233,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -5186,13 +5293,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.radialanglecount):
-            print(n+1,'/',self.radialanglecount)
+            print('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -5205,12 +5312,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -5262,13 +5372,13 @@ class sequence:
             if not socket.waitForBytesWritten(): break
             time.sleep(0.0001)
         for n in range(self.radialanglecount):
-            print(n+1,'/',self.radialanglecount)
+            print('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount))
             while True:
                 socket.waitForReadyRead()
                 datasize = socket.bytesAvailable()
                 time.sleep(0.0001)
                 if datasize == 8*params.samples:
-                    print('Readout finished : ',int(datasize/8), 'Samples')
+                    print('Readout finished: ' + str(int(datasize/8)) + ' Samples')
                     self.buffer[0:8*params.samples] = socket.read(8*params.samples)
                     break
                 else: continue
@@ -5281,12 +5391,15 @@ class sequence:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.radialanglecount) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-10)/1000)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.kspace = self.kspace
         
@@ -5301,6 +5414,4 @@ class sequence:
         
         print('Image acquired!')
         
-    
-
 seq = sequence()

@@ -48,6 +48,8 @@ QToolTip
 QWidget
 {
     color: #eff0f1;
+    font-family: 'Segoe UI';
+    font-size: 12px;
     background-color: #31363b;
     selection-background-color:#3daee9;
     selection-color: #eff0f1;

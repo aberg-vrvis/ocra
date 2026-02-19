@@ -1,12 +1,14 @@
 ################################################################################
 #
 # Author: Marcus Prier
-# Date: 2025
+# Date: 2026
 #
 ################################################################################
 
 import pickle
 import json
+import datetime
+import numpy as np
 from PyQt5.QtCore import QFile, QTextStream
 from cycler import cycler
 
@@ -41,11 +43,11 @@ class Parameters:
         self.phaseoffset = 0
         self.phaseoffsetradmod100 = 0
         self.RFpulselength = 100
-        self.RFpulseamplitude = 16384
+        self.RFpulseamplitude = 16382
         self.flipangletime = 90
         self.flipangleamplitude = 90
         self.flippulselength = 50
-        self.flippulseamplitude = 16384
+        self.flippulseamplitude = 16382
         self.RFattenuation = -15.00
         self.rx1 = 1
         self.rx2 = 0
@@ -228,6 +230,7 @@ class Parameters:
         self.motor_AC_inbetween = 1
         self.motor_AC_inbetween_step = 1
         self.single_plot = 1
+        self.image_stitching_slice = 0
         self.ernstanglecalc_T1 = 1700
         self.ernstanglecalc_TR = 500
         self.ernstanglecalc_EA = 90
@@ -244,6 +247,111 @@ class Parameters:
         self.PB_marker_isocenter_distance = 120
         self.Ref_PB_marker_isocenter_distance = 120
         self.PB_isocenter_position = 0
+        self.agriMRI_mode = 1
+        
+    def AgriMRI_var_init(self):
+        print('Setting default AgriMRI parameters.')
+        self.experiment_ID = ''
+        self.experiment_description = ''
+        self.plant_ID = ''
+        self.plant_part_ID = ''
+        self.plant_part_name = ''
+        self.plant_description = ''
+        self.agriMRI_folder_structure = 'rawdata/'
+        self.plant_date_of_sowing = datetime.datetime.strptime('2026-01-01','%Y-%m-%d')
+        self.plant_measurement_date = datetime.datetime.strptime('2026-01-01','%Y-%m-%d')
+        self.plant_measurement_das = 0
+        self.plant_phenological_phase = 0
+        self.plant_environment_outside = 0
+        self.plant_environment_inside = 0
+        self.plant_light_source_sun = 0
+        self.plant_light_source_grow_light = 0
+        self.plant_light_source_artificial = 0
+        self.plant_light_availability = -1
+        self.plant_water_availability = -1
+        self.plant_nutrient_application_index = 0
+        self.plant_nutrient_date = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_nutrient_das = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.plant_nitrogen = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        self.plant_phosphorus = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        self.plant_potassium = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        self.plant_stimulant_application_index = 0
+        self.plant_stimulant_product_name = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_stimulant_date = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_stimulant_das = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.plant_stimulant_dose = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        self.plant_protection_application_index = 0
+        self.plant_protection_product_name = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_protection_date = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_protection_das = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.plant_protection_dose = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        
+        self.plant_species_library = []
+        f = open('agriMRI/plant_species_library.csv', 'r')
+        lines = f.readlines()
+        f.close()
+        for n in range(len(lines)-1):
+            lines[n+1] = lines[n+1].strip()
+            self.plant_species_library.append(lines[n+1].split(','))
+        np.reshape(self.plant_species_library,(len(lines)-1, 4))
+        
+        self.plant_species_list = []
+        for m in range(len(lines)-1): self.plant_species_list.append(self.plant_species_library[m][1])
+        
+        self.plant_species_index = int(self.plant_species_library [0][0])
+        self.plant_species = self.plant_species_library [0][1]
+        self.plant_scientific_name = self.plant_species_library [0][2]
+        self.plant_taxonomy = self.plant_species_library [0][3]
+        
+    def AgriMRI_var_reset(self):
+        print('Setting default AgriMRI parameters.')
+        self.experiment_description = ''
+        self.plant_part_name = ''
+        self.plant_description = ''
+        self.plant_date_of_sowing = datetime.datetime.strptime('2026-01-01','%Y-%m-%d')
+        self.plant_measurement_date = datetime.datetime.strptime('2026-01-01','%Y-%m-%d')
+        self.plant_measurement_das = 0
+        self.plant_phenological_phase = 0
+        self.plant_environment_outside = 0
+        self.plant_environment_inside = 0
+        self.plant_light_source_sun = 0
+        self.plant_light_source_grow_light = 0
+        self.plant_light_source_artificial = 0
+        self.plant_light_availability = -1
+        self.plant_water_availability = -1
+        self.plant_nutrient_application_index = 0
+        self.plant_nutrient_date = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_nutrient_das = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.plant_nitrogen = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        self.plant_phosphorus = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        self.plant_potassium = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        self.plant_stimulant_application_index = 0
+        self.plant_stimulant_product_name = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_stimulant_date = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_stimulant_das = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.plant_stimulant_dose = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        self.plant_protection_application_index = 0
+        self.plant_protection_product_name = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_protection_date = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_protection_das = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.plant_protection_dose = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+        
+        self.plant_species_library = []
+        f = open('agriMRI/plant_species_library.csv', 'r')
+        lines = f.readlines()
+        f.close()
+        for n in range(len(lines)-1):
+            lines[n+1] = lines[n+1].strip()
+            self.plant_species_library.append(lines[n+1].split(','))
+        np.reshape(self.plant_species_library,(len(lines)-1,4))
+        
+        self.plant_species_list = []
+        for m in range(len(lines)-1): self.plant_species_list.append(self.plant_species_library[m][1])
+        
+        self.plant_species_index = int(self.plant_species_library [0][0])
+        self.plant_species = self.plant_species_library [0][1]
+        self.plant_scientific_name = self.plant_species_library [0][2]
+        self.plant_taxonomy = self.plant_species_library [0][3]
 
     def saveFileParameter(self):  
         with open('parameters.pkl', 'wb') as file:
@@ -412,6 +520,7 @@ class Parameters:
                          self.motor_AC_inbetween, \
                          self.motor_AC_inbetween_step, \
                          self.single_plot, \
+                         self.image_stitching_slice, \
                          self.ernstanglecalc_T1, \
                          self.ernstanglecalc_TR, \
                          self.ernstanglecalc_EA, \
@@ -427,7 +536,8 @@ class Parameters:
                          self.TEstepping, \
                          self.PB_marker_isocenter_distance, \
                          self.Ref_PB_marker_isocenter_distance, \
-                         self.PB_isocenter_position], file)
+                         self.PB_isocenter_position, \
+                         self.agriMRI_mode], file)
        
         print('Parameters saved!')
         
@@ -472,6 +582,50 @@ class Parameters:
                          self.B1alphamapmasked], file)
        
         print('Data saved!')
+        
+    def saveFileAgriMRIParameter(self):  
+        with open('agriMRI/agriMRIparameters.pkl', 'wb') as file:
+            pickle.dump([self.experiment_ID, \
+                         self.experiment_description, \
+                         self.plant_ID, \
+                         self.plant_part_ID, \
+                         self.plant_species_index, \
+                         self.plant_species_list, \
+                         self.plant_species, \
+                         self.plant_scientific_name, \
+                         self.plant_taxonomy, \
+                         self.plant_part_name, \
+                         self.plant_description, \
+                         self.agriMRI_folder_structure, \
+                         self.plant_date_of_sowing, \
+                         self.plant_measurement_date, \
+                         self.plant_measurement_das, \
+                         self.plant_phenological_phase, \
+                         self.plant_environment_outside, \
+                         self.plant_environment_inside, \
+                         self.plant_light_source_sun, \
+                         self.plant_light_source_grow_light, \
+                         self.plant_light_source_artificial, \
+                         self.plant_light_availability, \
+                         self.plant_water_availability, \
+                         self.plant_nutrient_application_index, \
+                         self.plant_nutrient_date, \
+                         self.plant_nutrient_das, \
+                         self.plant_nitrogen, \
+                         self.plant_phosphorus, \
+                         self.plant_potassium, \
+                         self.plant_stimulant_application_index, \
+                         self.plant_stimulant_product_name, \
+                         self.plant_stimulant_date, \
+                         self.plant_stimulant_das, \
+                         self.plant_stimulant_dose, \
+                         self.plant_protection_application_index, \
+                         self.plant_protection_product_name, \
+                         self.plant_protection_date, \
+                         self.plant_protection_das, \
+                         self.plant_protection_dose], file)
+            
+        print('AgriMRI parameters saved!')
 
     def saveSarCal(self):  
         with open('sarcal.pkl', 'wb') as file:
@@ -656,6 +810,7 @@ class Parameters:
                 self.motor_AC_inbetween, \
                 self.motor_AC_inbetween_step, \
                 self.single_plot, \
+                self.image_stitching_slice, \
                 self.ernstanglecalc_T1, \
                 self.ernstanglecalc_TR, \
                 self.ernstanglecalc_EA, \
@@ -671,7 +826,8 @@ class Parameters:
                 self.TEstepping, \
                 self.PB_marker_isocenter_distance, \
                 self.Ref_PB_marker_isocenter_distance, \
-                self.PB_isocenter_position = pickle.load(file)
+                self.PB_isocenter_position, \
+                self.agriMRI_mode = pickle.load(file)
              
                 print('Internal GUI parameter successfully restored from file.')
                 
@@ -725,6 +881,55 @@ class Parameters:
         except:
             print('Data could not have been restored, setting default.')
             self.var_init()
+            
+    def loadAgriMRIParam(self):
+        try:
+            with open('agriMRI/agriMRIparameters.pkl', 'rb') as file:
+                self.experiment_ID, \
+                self.experiment_description, \
+                self.plant_ID, \
+                self.plant_part_ID, \
+                self.plant_species_index, \
+                self.plant_species_list, \
+                self.plant_species, \
+                self.plant_scientific_name, \
+                self.plant_taxonomy, \
+                self.plant_part_name, \
+                self.plant_description, \
+                self.agriMRI_folder_structure, \
+                self.plant_date_of_sowing, \
+                self.plant_measurement_date, \
+                self.plant_measurement_das, \
+                self.plant_phenological_phase, \
+                self.plant_environment_outside, \
+                self.plant_environment_inside, \
+                self.plant_light_source_sun, \
+                self.plant_light_source_grow_light, \
+                self.plant_light_source_artificial, \
+                self.plant_light_availability, \
+                self.plant_water_availability, \
+                self.plant_nutrient_application_index, \
+                self.plant_nutrient_date, \
+                self.plant_nutrient_das, \
+                self.plant_nitrogen, \
+                self.plant_phosphorus, \
+                self.plant_potassium, \
+                self.plant_stimulant_application_index, \
+                self.plant_stimulant_product_name, \
+                self.plant_stimulant_date, \
+                self.plant_stimulant_das, \
+                self.plant_stimulant_dose, \
+                self.plant_protection_application_index, \
+                self.plant_protection_product_name, \
+                self.plant_protection_date, \
+                self.plant_protection_das, \
+                self.plant_protection_dose = pickle.load(file)
+             
+                print('AgriMRI parameter successfully restored from file.')
+                
+        except:
+            print('AgriMRI parameter could not have been restored, setting default.')
+            self.AgriMRI_var_init()
         
     def save_header_file_txt(self):
         file = open(params.datapath + '_Header.txt','w')
@@ -995,10 +1200,8 @@ class Parameters:
             'Crusher gradient duration [µs]': self.crushertime,
             'Spoiler gradient duration [µs]': self.spoilertime,
             'Diffusion gradient duration [µs]': self.diffusiontime,
-            'Fluid compensation readout gradient prephaser 1 duration [µs]':
-                self.GROfcpretime1,
-            'Fluid compensation readout gradient prephaser 2 duration [µs]':
-                self.GROfcpretime2,
+            'Fluid compensation readout gradient prephaser 1 duration [µs]': self.GROfcpretime1,
+            'Fluid compensation readout gradient prephaser 2 duration [µs]': self.GROfcpretime2,
             'Radial angle [°]': self.radialanglestep,
             'Radial oversampling factor': self.radialosfactor,
             'Radial angle [rad]': self.radialanglestepradmod100,
@@ -1040,6 +1243,130 @@ class Parameters:
         out_file = open(filename, 'w')
 
         json.dump(header_dict, out_file, ensure_ascii=False, indent=4)
+        
+    def save_AgriMRI_Metadata_file_json(self):
+        self.plant_nutrient_dates = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_stimulant_dates = ['', '', '', '', '', '', '', '', '', '']
+        self.plant_protection_dates = ['', '', '', '', '', '', '', '', '', '']
+        for n in range(10):
+            if self.plant_nutrient_date[n] != '': self.plant_nutrient_dates[n] = self.plant_nutrient_date[n].strftime('%Y-%m-%d')
+            else: self.plant_nutrient_date[n] = ''
+            if self.plant_stimulant_date[n] != '': self.plant_stimulant_dates[n] = self.plant_stimulant_date[n].strftime('%Y-%m-%d')
+            else: self.plant_stimulant_date[n] = ''
+            if self.plant_protection_date[n] != '': self.plant_protection_dates[n] = self.plant_protection_date[n].strftime('%Y-%m-%d')
+            else: self.plant_protection_date[n] = ''
+        
+        filename = params.agriMRI_folder_structure + '/AgriMRI_Metadata.json'
+
+        header_dict = {
+            'general': {
+                'Experiment ID': self.experiment_ID,
+                'Experiment description': self.experiment_description,
+                'Plant ID': self.plant_ID,
+                'Plant part ID': self.plant_part_ID,
+                'Species': self.plant_species,
+                'Scientific name': self.plant_scientific_name,
+                'Taxonomy': self.plant_taxonomy,
+                'Plant part name': self.plant_part_name,
+                'Plant description': self.plant_description,
+                'AgriMRI folder structure': self.agriMRI_folder_structure,
+                'Date of sowing': self.plant_date_of_sowing.strftime('%Y-%m-%d')
+            },
+            'measurement': {
+                'Measurement date': self.plant_measurement_date.strftime('%Y-%m-%d'),
+                'Measurement DAS': self.plant_measurement_das,
+                'Phenological phase': self.plant_phenological_phase
+            },
+            'treatment': {
+                'environment': {
+                    'Environment outside': self.plant_environment_outside,
+                    'Environment inside': self.plant_environment_inside},
+                'light': {
+                    'Light source sun': self.plant_light_source_sun,
+                    'Light source grow light': self.plant_light_source_grow_light,
+                    'Light source artificial': self.plant_light_source_artificial,
+                    'Light availability': self.plant_light_availability},
+                'water': {
+                    'Water availability': self.plant_water_availability},
+                'nutrient': {
+                    'Nutrient application index': self.plant_nutrient_application_index,
+                    'Nutrient application date': self.plant_nutrient_dates,
+                    'Nutrient application DAS': self.plant_nutrient_das,
+                    'Nutrient nitrogen [%]': self.plant_nitrogen,
+                    'Nutrient phosphorus [%]': self.plant_phosphorus,
+                    'Nutrient potassium [%]': self.plant_potassium},
+                'stimulant':{
+                    'Stimulant application index': self.plant_stimulant_application_index,
+                    'Stimulant product name': self.plant_stimulant_product_name,
+                    'Stimulant application date': self.plant_stimulant_dates,
+                    'Stimulant application DAS': self.plant_stimulant_das,
+                    'Stimulant dose': self.plant_stimulant_dose},
+                'protection': {
+                    'Protection application index': self.plant_protection_application_index,
+                    'Protection product name': self.plant_protection_product_name,
+                    'Protection application date': self.plant_protection_dates,
+                    'Protection application DAS': self.plant_protection_das,
+                    'Protection dose': self.plant_protection_dose
+                }
+            }
+        }
+
+        out_file = open(filename, 'w')
+
+        json.dump(header_dict, out_file, ensure_ascii=False, indent=4)
+        
+    def load_AgriMRI_Metadata_file_json(self):
+        with open(self.agriMRI_folder_structure + 'AgriMRI_Metadata.json', 'r') as j:
+            jsonparams = json.loads(j.read())
+
+            self.experiment_ID = jsonparams['general']['Experiment ID']
+            self.experiment_description = jsonparams['general']['Experiment description']
+            self.plant_ID = jsonparams['general']['Plant ID']
+            self.plant_part_ID = jsonparams['general']['Plant part ID']
+            self.plant_species = jsonparams['general']['Species']
+            self.plant_scientific_name = jsonparams['general']['Scientific name']
+            self.plant_taxonomy = jsonparams['general']['Taxonomy']
+            self.plant_part_name = jsonparams['general']['Plant part name']
+            self.plant_description = jsonparams['general']['Plant description']
+            self.agriMRI_folder_structure = jsonparams['general']['AgriMRI folder structure']
+            self.plant_date_of_sowing = datetime.datetime.strptime(jsonparams['general']['Date of sowing'],'%Y-%m-%d')
+            self.plant_measurement_date = datetime.datetime.strptime(jsonparams['measurement']['Measurement date'],'%Y-%m-%d')
+            self.plant_measurement_das = jsonparams['measurement']['Measurement DAS']
+            self.plant_phenological_phase = jsonparams['measurement']['Phenological phase']
+            self.plant_environment_outside = jsonparams['treatment']['environment']['Environment outside']
+            self.plant_environment_inside = jsonparams['treatment']['environment']['Environment inside']
+            self.plant_light_source_sun = jsonparams['treatment']['light']['Light source sun']
+            self.plant_light_source_grow_light = jsonparams['treatment']['light']['Light source grow light']
+            self.plant_light_source_artificial = jsonparams['treatment']['light']['Light source artificial']
+            self.plant_light_availability = jsonparams['treatment']['light']['Light availability']
+            self.plant_water_availability = jsonparams['treatment']['water']['Water availability']
+            self.plant_nutrient_application_index = jsonparams['treatment']['nutrient']['Nutrient application index']
+            self.plant_nutrient_dates = jsonparams['treatment']['nutrient']['Nutrient application date']
+            self.plant_nutrient_das = jsonparams['treatment']['nutrient']['Nutrient application DAS']
+            self.plant_nitrogen = jsonparams['treatment']['nutrient']['Nutrient nitrogen [%]']
+            self.plant_phosphorus = jsonparams['treatment']['nutrient']['Nutrient phosphorus [%]']
+            self.plant_potassium = jsonparams['treatment']['nutrient']['Nutrient potassium [%]']
+            self.plant_stimulant_application_index = jsonparams['treatment']['stimulant']['Stimulant application index']
+            self.plant_stimulant_product_name = jsonparams['treatment']['stimulant']['Stimulant product name']
+            self.plant_stimulant_dates = jsonparams['treatment']['stimulant']['Stimulant application date']
+            self.plant_stimulant_das = jsonparams['treatment']['stimulant']['Stimulant application DAS']
+            self.plant_stimulant_dose = jsonparams['treatment']['stimulant']['Stimulant dose']
+            self.plant_protection_application_index = jsonparams['treatment']['protection']['Protection application index']
+            self.plant_protection_product_name = jsonparams['treatment']['protection']['Protection product name']
+            self.plant_protection_dates = jsonparams['treatment']['protection']['Protection application date']
+            self.plant_protection_das = jsonparams['treatment']['protection']['Protection application DAS']
+            self.plant_protection_dose = jsonparams['treatment']['protection']['Protection dose']
+            
+            for n in range(10):
+                if self.plant_nutrient_dates[n] != '': self.plant_nutrient_date[n] = datetime.datetime.strptime(self.plant_nutrient_dates[n],'%Y-%m-%d')
+                else: self.plant_nutrient_date[n] = ''
+                if self.plant_stimulant_dates[n] != '': self.plant_stimulant_date[n] = datetime.datetime.strptime(self.plant_stimulant_dates[n],'%Y-%m-%d')
+                else: self.plant_stimulant_date[n] = ''
+                if self.plant_protection_dates[n] != '': self.plant_protection_date[n] = datetime.datetime.strptime(self.plant_protection_dates[n],'%Y-%m-%d')
+                else: self.plant_protection_date[n] = ''
+                
+            for n in range(len(self.plant_species_list)):
+                if self.plant_species_list[n] == self.plant_species: self.plant_species_index = n
 
     def load_GUItheme(self):
         file = QFile(':/' + self.GUIthemestr[self.GUItheme] + '.qss')

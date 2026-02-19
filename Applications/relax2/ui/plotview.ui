@@ -293,18 +293,6 @@
       <property name="alignment">
        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
       </property>
-      <property name="minimum">
-       <number>1000</number>
-      </property>
-      <property name="maximum">
-       <number>250000</number>
-      </property>
-      <property name="singleStep">
-       <number>1000</number>
-      </property>
-      <property name="value">
-       <number>20000</number>
-      </property>
      </widget>
     </item>
     <item row="7" column="2">
@@ -715,6 +703,25 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>Frequncyaxisrange_spinBox</tabstop>
+  <tabstop>Center_Frequency_lineEdit</tabstop>
+  <tabstop>FWHM_lineEdit</tabstop>
+  <tabstop>Peak_lineEdit</tabstop>
+  <tabstop>Noise_lineEdit</tabstop>
+  <tabstop>SNR_lineEdit</tabstop>
+  <tabstop>Inhomogeneity_lineEdit</tabstop>
+  <tabstop>Image_Minimum_doubleSpinBox</tabstop>
+  <tabstop>Image_Maximum_doubleSpinBox</tabstop>
+  <tabstop>Save_Spectrum_Data_pushButton</tabstop>
+  <tabstop>Save_Mag_Image_Data_pushButton</tabstop>
+  <tabstop>Save_Image_Data_pushButton</tabstop>
+  <tabstop>Save_Pha_Image_Data_pushButton</tabstop>
+  <tabstop>View_3D_Data_pushButton</tabstop>
+  <tabstop>Hist_pushButton</tabstop>
+  <tabstop>Animation_Step_spinBox</tabstop>
+  <tabstop>Animate_pushButton</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

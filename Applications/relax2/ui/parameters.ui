@@ -2989,6 +2989,64 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>Flipangle_Amplitude_spinBox</tabstop>
+  <tabstop>Flipangle_Time_spinBox</tabstop>
+  <tabstop>Auto_Frequency_Offset_radioButton</tabstop>
+  <tabstop>Frequency_Offset_spinBox</tabstop>
+  <tabstop>Phase_Offset_spinBox</tabstop>
+  <tabstop>TE_doubleSpinBox</tabstop>
+  <tabstop>Samplingtime_spinBox</tabstop>
+  <tabstop>TR_spinBox</tabstop>
+  <tabstop>TI_doubleSpinBox</tabstop>
+  <tabstop>SIR_TE_doubleSpinBox</tabstop>
+  <tabstop>Auto_Gradients_radioButton</tabstop>
+  <tabstop>Recalculate_Gradients_pushButton</tabstop>
+  <tabstop>GROamplitude_spinBox</tabstop>
+  <tabstop>GPEstep_spinBox</tabstop>
+  <tabstop>GSamplitude_spinBox</tabstop>
+  <tabstop>Crusher_Amplitude_spinBox</tabstop>
+  <tabstop>Spoiler_Amplitude_spinBox</tabstop>
+  <tabstop>GSPEstep_spinBox</tabstop>
+  <tabstop>GDiffamplitude_spinBox</tabstop>
+  <tabstop>Average_radioButton</tabstop>
+  <tabstop>Average_spinBox</tabstop>
+  <tabstop>Projection_X_radioButton</tabstop>
+  <tabstop>Projection_Y_radioButton</tabstop>
+  <tabstop>Projection_Z_radioButton</tabstop>
+  <tabstop>Projection_Angle_spinBox</tabstop>
+  <tabstop>TI_Start_doubleSpinBox</tabstop>
+  <tabstop>TI_Stop_doubleSpinBox</tabstop>
+  <tabstop>TI_Steps_spinBox</tabstop>
+  <tabstop>TI_Stepping_Linear_radioButton</tabstop>
+  <tabstop>TI_Stepping_Log_radioButton</tabstop>
+  <tabstop>TE_Start_doubleSpinBox</tabstop>
+  <tabstop>TE_Stop_doubleSpinBox</tabstop>
+  <tabstop>TE_Steps_spinBox</tabstop>
+  <tabstop>TE_Stepping_Linear_radioButton</tabstop>
+  <tabstop>TE_Stepping_Log_radioButton</tabstop>
+  <tabstop>Image_Orientation_comboBox</tabstop>
+  <tabstop>Image_Resolution_comboBox</tabstop>
+  <tabstop>FOV_doubleSpinBox</tabstop>
+  <tabstop>Slice_Thickness_doubleSpinBox</tabstop>
+  <tabstop>Slice_Offset_doubleSpinBox</tabstop>
+  <tabstop>SPEsteps_spinBox</tabstop>
+  <tabstop>Radial_Angle_Step_spinBox</tabstop>
+  <tabstop>Radial_Oversampling_Factor_spinBox</tabstop>
+  <tabstop>Motor_Image_Count_spinBox</tabstop>
+  <tabstop>Motor_Movement_Step_doubleSpinBox</tabstop>
+  <tabstop>Motor_Total_Image_Length_doubleSpinBox</tabstop>
+  <tabstop>Motor_Settling_Time_doubleSpinBox</tabstop>
+  <tabstop>Motor_Start_Position_doubleSpinBox</tabstop>
+  <tabstop>Motor_Start_Here_pushButton</tabstop>
+  <tabstop>Motor_End_Position_doubleSpinBox</tabstop>
+  <tabstop>Motor_End_Here_pushButton</tabstop>
+  <tabstop>Motor_AC_Position_doubleSpinBox</tabstop>
+  <tabstop>Motor_AC_Position_Center_radioButton</tabstop>
+  <tabstop>Motor_AC_Here_pushButton</tabstop>
+  <tabstop>Motor_AC_Inbetween_radioButton</tabstop>
+  <tabstop>Motor_AC_Inbetween_Step_spinBox</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

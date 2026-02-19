@@ -9,7 +9,6 @@ license = "MIT"
 python = "<3.12,>=3.8"
 pyqt5 = "^5.15"
 matplotlib = "^3.7.1"
-pandas = "^1.5.3"
 scipy = "^1.10.1"
 
 [tool.poetry.dev-dependencies]

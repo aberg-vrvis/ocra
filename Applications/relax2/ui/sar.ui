@@ -740,6 +740,27 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>SAR_Enable_radioButton</tabstop>
+  <tabstop>SAR_Cal_pushButton</tabstop>
+  <tabstop>SAR_Max_Power_doubleSpinBox</tabstop>
+  <tabstop>SAR_Calc_Lookup_pushButton</tabstop>
+  <tabstop>SAR_Send_Lookup_pushButton</tabstop>
+  <tabstop>SAR_Power_W_pushButton</tabstop>
+  <tabstop>SAR_Power_dBm_pushButton</tabstop>
+  <tabstop>SAR_Limit_doubleSpinBox</tabstop>
+  <tabstop>SAR_10sLimit_lineEdit</tabstop>
+  <tabstop>SAR_6mLimit_doubleSpinBox</tabstop>
+  <tabstop>SAR_6mLimit_lineEdit</tabstop>
+  <tabstop>SAR_Tran_doubleSpinBox</tabstop>
+  <tabstop>SAR_PeakLimit_lineEdit</tabstop>
+  <tabstop>SAR_New_Pat_pushButton</tabstop>
+  <tabstop>SAR_New_Pos_pushButton</tabstop>
+  <tabstop>SAR_Status_lineEdit</tabstop>
+  <tabstop>SAR_Error_Clear_pushButton</tabstop>
+  <tabstop>SAR_Log_Data_pushButton</tabstop>
+  <tabstop>SAR_Stop_pushButton</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

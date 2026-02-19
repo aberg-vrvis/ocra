@@ -157,34 +157,6 @@
       </property>
      </widget>
     </item>
-    <item row="37" column="5">
-     <widget class="QLabel" name="label_22">
-      <property name="minimumSize">
-       <size>
-        <width>200</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>200</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="font">
-       <font>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Development</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-    </item>
     <item row="34" column="3">
      <widget class="QPushButton" name="Scaling_Y_Apply_pushButton">
       <property name="minimumSize">
@@ -1614,34 +1586,6 @@
       </property>
      </widget>
     </item>
-    <item row="38" column="6">
-     <widget class="QDoubleSpinBox" name="GRO_Length_Scaler_doubleSpinBox">
-      <property name="minimumSize">
-       <size>
-        <width>150</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>150</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-      </property>
-      <property name="maximum">
-       <double>2.000000000000000</double>
-      </property>
-      <property name="singleStep">
-       <double>0.010000000000000</double>
-      </property>
-      <property name="value">
-       <double>1.000000000000000</double>
-      </property>
-     </widget>
-    </item>
     <item row="4" column="3">
      <widget class="QPushButton" name="AC_Apply_pushButton">
       <property name="minimumSize">
@@ -2101,33 +2045,6 @@
       </property>
      </widget>
     </item>
-    <item row="38" column="5">
-     <widget class="QLabel" name="label_47">
-      <property name="minimumSize">
-       <size>
-        <width>200</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>200</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>GRO Prephaser Length Scaler</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-    </item>
     <item row="32" column="3">
      <widget class="QDoubleSpinBox" name="Gradient_Scaling_Y_doubleSpinBox">
       <property name="minimumSize">
@@ -2371,9 +2288,235 @@
       </property>
      </widget>
     </item>
+    <item row="40" column="5">
+     <widget class="QLabel" name="label_47">
+      <property name="minimumSize">
+       <size>
+        <width>200</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>200</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>11</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>GRO Prephaser Length Scaler</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="40" column="6">
+     <widget class="QDoubleSpinBox" name="GRO_Length_Scaler_doubleSpinBox">
+      <property name="minimumSize">
+       <size>
+        <width>150</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>150</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+      <property name="maximum">
+       <double>2.000000000000000</double>
+      </property>
+      <property name="singleStep">
+       <double>0.010000000000000</double>
+      </property>
+      <property name="value">
+       <double>1.000000000000000</double>
+      </property>
+     </widget>
+    </item>
+    <item row="39" column="5">
+     <widget class="QLabel" name="label_22">
+      <property name="minimumSize">
+       <size>
+        <width>200</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>200</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Development</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="37" column="5">
+     <widget class="QLabel" name="label_27">
+      <property name="minimumSize">
+       <size>
+        <width>200</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>200</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>AgriMRI</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="38" column="6">
+     <layout class="QHBoxLayout" name="horizontalLayout_13">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QRadioButton" name="AgriMRI_Mode_radioButton">
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Metadata</string>
+        </property>
+        <property name="autoExclusive">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="38" column="5">
+     <widget class="QLabel" name="label_32">
+      <property name="minimumSize">
+       <size>
+        <width>200</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>200</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Restart software after change!</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>Frequency_doubleSpinBox</tabstop>
+  <tabstop>auto_recenter_radioButton</tabstop>
+  <tabstop>Center_pushButton</tabstop>
+  <tabstop>AC_Apply_pushButton</tabstop>
+  <tabstop>RF_Pulselength_spinBox</tabstop>
+  <tabstop>RF_Attenuation_doubleSpinBox</tabstop>
+  <tabstop>FA_Apply_pushButton</tabstop>
+  <tabstop>RX1_radioButton</tabstop>
+  <tabstop>RX2_radioButton</tabstop>
+  <tabstop>Shim_X_spinBox</tabstop>
+  <tabstop>Shim_Y_spinBox</tabstop>
+  <tabstop>Shim_Z_spinBox</tabstop>
+  <tabstop>Shim_Z2_spinBox</tabstop>
+  <tabstop>Shim_Apply_pushButton</tabstop>
+  <tabstop>Gradient_Scaling_X_doubleSpinBox</tabstop>
+  <tabstop>Scaling_X_Apply_pushButton</tabstop>
+  <tabstop>Gradient_Scaling_Y_doubleSpinBox</tabstop>
+  <tabstop>Scaling_Y_Apply_pushButton</tabstop>
+  <tabstop>Gradient_Scaling_Z_doubleSpinBox</tabstop>
+  <tabstop>Scaling_Z_Apply_pushButton</tabstop>
+  <tabstop>PB_Marker_IsoCenter_Distance_doubleSpinBox</tabstop>
+  <tabstop>PB_Marker_Cal_Apply_pushButton</tabstop>
+  <tabstop>PB_IsoCenter_Position_doubleSpinBox</tabstop>
+  <tabstop>Average_Complex_radioButton</tabstop>
+  <tabstop>Average_Abs_radioButton</tabstop>
+  <tabstop>Readout_Bandwidth_spinBox</tabstop>
+  <tabstop>SignalMask_doubleSpinBox</tabstop>
+  <tabstop>Undersampling_Methode_1_radioButton</tabstop>
+  <tabstop>Undersampling_Methode_2_radioButton</tabstop>
+  <tabstop>Undersampling_Time_radioButton</tabstop>
+  <tabstop>Undersampling_Time_spinBox</tabstop>
+  <tabstop>Undersampling_Phase_radioButton</tabstop>
+  <tabstop>Undersampling_Phase_spinBox</tabstop>
+  <tabstop>kspace_cut_circ_radioButton</tabstop>
+  <tabstop>kspace_cut_rec_radioButton</tabstop>
+  <tabstop>kSpace_Cut_Center_radioButton</tabstop>
+  <tabstop>kSpace_Cut_Center_spinBox</tabstop>
+  <tabstop>kSpace_Cut_Outside_radioButton</tabstop>
+  <tabstop>kSpace_Cut_Outside_spinBox</tabstop>
+  <tabstop>ln_kSpace_Magnitude_radioButton</tabstop>
+  <tabstop>Single_Plot_radioButton</tabstop>
+  <tabstop>Measurement_Time_Dialog_radioButton</tabstop>
+  <tabstop>Images_Plot_radioButton</tabstop>
+  <tabstop>Image_Filter_radioButton</tabstop>
+  <tabstop>Image_Grid_radioButton</tabstop>
+  <tabstop>Image_Colormap_comboBox</tabstop>
+  <tabstop>Projection3D_radioButton</tabstop>
+  <tabstop>Projection3D_Quality_Low_radioButton</tabstop>
+  <tabstop>Projection3D_Quality_High_radioButton</tabstop>
+  <tabstop>Auto_Data_Process_radioButton</tabstop>
+  <tabstop>GUI_Light_radioButton</tabstop>
+  <tabstop>GUI_Dark_radioButton</tabstop>
+  <tabstop>Header_File_Format_comboBox</tabstop>
+  <tabstop>AgriMRI_Mode_radioButton</tabstop>
+  <tabstop>GRO_Length_Scaler_doubleSpinBox</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
