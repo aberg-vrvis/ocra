@@ -40,7 +40,14 @@ from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 from matplotlib.image import NonUniformImage
 
+print('________________________________________________________\n')
+print('Relax 2.0')
+print('Marcus Prier, Magdeburg, 2026')
+print('________________________________________________________\n')
+
 from parameter_handler import params
+params.loadParam()
+params.loadData()
 from sequence_handler import seq
 from process_handler import proc
 from data_logger import logger
@@ -84,7 +91,7 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
         self.setWindowTitle('Relax 2.0')
         params.load_GUItheme()
         self.setStyleSheet(params.stylesheet)
-        self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'FreeSans', 'Piboto', 'Arial' !important; }")
+        self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'Piboto Condensed', 'Arial' !important; }")
         self.setGeometry(10, 40, 400, 410)
         
         params.GUImode = 0
@@ -118,20 +125,21 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
         params.motor_actual_position = 0
         params.motor_goto_position = 0
         
-        params.AgriMRI_var_init()
-
+        if params.agriMRI_mode == 1:
+            params.AgriMRI_var_init()
+        
         self.motor = None
         self.motor_reader = None
         
         if params.motor_enable:
             self.motor_connect()
+            
+        self.establish_conn()
 
         if params.GSamplitude == 0:
             params.GSposttime = 0
         else:
             params.GSposttime = int((200 * params.GSamplitude + 4 * params.flippulselength * params.GSamplitude) / 2 - 200 * params.GSamplitude / 2) / (params.GSamplitude / 2)
-        
-        self.establish_conn()
 
         self.Mode_Spectroscopy_pushButton.clicked.connect(lambda: self.switch_GUImode(0))
         self.Mode_Imaging_pushButton.clicked.connect(lambda: self.switch_GUImode(1))
@@ -2492,10 +2500,7 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
     def __init__(self, parent=None):
         super(AgriMRIMetadataWindow, self).__init__(parent)
         self.setupUi(self)
-        
-        #params.loadAgriMRIParam()
-        params.AgriMRI_var_init()
-        
+                
         self.load_params()
 
         self.ui = loadUi('ui/agriMRI.ui')
@@ -2514,11 +2519,14 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         self.Plant_Part_Name_lineEdit.editingFinished.connect(lambda: self.update_params())
         self.Plant_Date_Of_Sowing_dateEdit.userDateChanged.connect(lambda: self.set_Date_Of_Sowing())
         self.Plant_Measurement_Date_dateEdit.userDateChanged.connect(lambda: self.set_Measurement_Date())
+        self.Plant_Measurement_Date_Today_pushButton.clicked.connect(lambda: self.set_Measurement_Date_Today())
         self.Plant_Measurement_DAS_spinBox.setKeyboardTracking(False)
         self.Plant_Measurement_DAS_spinBox.valueChanged.connect(lambda: self.set_Measurement_DAS())
         
-        self.Plant_Phenological_Phase_spinBox.setKeyboardTracking(False)
-        self.Plant_Phenological_Phase_spinBox.valueChanged.connect(self.update_params)
+        self.Plant_Phenological_Phase_comboBox.clear()
+        self.Plant_Phenological_Phase_comboBox.addItems(params.plant_phenological_phases_list)
+        self.Plant_Phenological_Phase_comboBox.setCurrentIndex(0)
+        self.Plant_Phenological_Phase_comboBox.currentIndexChanged.connect(lambda: self.set_Phenological_Phase())
         
         self.Plant_Environment_Outside_radioButton.toggled.connect(self.update_params)
         self.Plant_Environment_Inside_radioButton.toggled.connect(self.update_params)
@@ -2580,7 +2588,7 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         self.Plant_Date_Of_Sowing_dateEdit.blockSignals(True)
         self.Plant_Measurement_Date_dateEdit.blockSignals(True)
         self.Plant_Measurement_DAS_spinBox.blockSignals(True)
-        self.Plant_Phenological_Phase_spinBox.blockSignals(True)
+        self.Plant_Phenological_Phase_comboBox.blockSignals(True)
         self.Plant_Environment_Outside_radioButton.blockSignals(True)
         self.Plant_Environment_Inside_radioButton.blockSignals(True)
         self.Plant_Light_Source_Sun_radioButton.blockSignals(True)
@@ -2618,7 +2626,13 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         self.Plant_Measurement_Date_dateEdit.setDate(params.plant_measurement_date)
         self.Plant_Measurement_DAS_spinBox.setValue(params.plant_measurement_das)
 
-        self.Plant_Phenological_Phase_spinBox.setValue(params.plant_phenological_phase)
+        self.Plant_Phenological_Phase_comboBox.clear()
+        self.Plant_Phenological_Phase_comboBox.addItems(params.plant_phenological_phases_list)
+        self.Plant_Phenological_Phase_comboBox.setCurrentIndex(params.plant_phenological_phase_index)
+        if params.plant_BBCH_scale == 'General': self.Plant_Phenological_Phase_comboBox.setStyleSheet('color: orange;')
+        else: 
+            if params.GUItheme == 0: self.Plant_Phenological_Phase_comboBox.setStyleSheet('color: #31363B')
+            else: self.Plant_Phenological_Phase_comboBox.setStyleSheet('color: #eff0f1')
         
         if params.plant_environment_outside == 1: self.Plant_Environment_Outside_radioButton.setChecked(True)
         if params.plant_environment_inside == 1: self.Plant_Environment_Inside_radioButton.setChecked(True)
@@ -2632,7 +2646,7 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         
         self.Plant_Nutrient_Application_comboBox.setCurrentIndex(params.plant_nutrient_application_index)
         try: self.Plant_Nutrient_Date_dateEdit.setDate(params.plant_nutrient_date[params.plant_nutrient_application_index])
-        except: self.Plant_Nutrient_Date_dateEdit.setDate(datetime.datetime.strptime('2026-01-01','%Y-%m-%d'))
+        except: self.Plant_Nutrient_Date_dateEdit.setDate(datetime.datetime.strptime('2025-01-01','%Y-%m-%d'))
         self.Plant_Nutrient_DAS_spinBox.setValue(params.plant_nutrient_das[params.plant_nutrient_application_index])
         self.Plant_Nitrogen_spinBox.setValue(params.plant_nitrogen[params.plant_nutrient_application_index])
         self.Plant_Phosphorus_spinBox.setValue(params.plant_phosphorus[params.plant_nutrient_application_index])
@@ -2641,14 +2655,14 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         self.Plant_Stimulant_Application_comboBox.setCurrentIndex(params.plant_stimulant_application_index)
         self.Plant_Stimulant_Product_Name_lineEdit.setText(params.plant_stimulant_product_name[params.plant_stimulant_application_index])
         try: self.Plant_Stimulant_Date_dateEdit.setDate(params.plant_stimulant_date[params.plant_stimulant_application_index])
-        except: self.Plant_Stimulant_Date_dateEdit.setDate(datetime.datetime.strptime('2026-01-01','%Y-%m-%d'))
+        except: self.Plant_Stimulant_Date_dateEdit.setDate(datetime.datetime.strptime('2025-01-01','%Y-%m-%d'))
         self.Plant_Stimulant_DAS_spinBox.setValue(params.plant_stimulant_das[params.plant_stimulant_application_index])
         self.Plant_Stimulant_Dose_spinBox.setValue(params.plant_stimulant_dose[params.plant_stimulant_application_index])
         
         self.Plant_Protection_Application_comboBox.setCurrentIndex(params.plant_protection_application_index)
         self.Plant_Protection_Product_Name_lineEdit.setText(str(params.plant_protection_product_name[params.plant_protection_application_index]))
         try: self.Plant_Protection_Date_dateEdit.setDate(params.plant_protection_date[params.plant_protection_application_index])
-        except: self.Plant_Protection_Date_dateEdit.setDate(datetime.datetime.strptime('2026-01-01','%Y-%m-%d'))
+        except: self.Plant_Protection_Date_dateEdit.setDate(datetime.datetime.strptime('2025-01-01','%Y-%m-%d'))
         self.Plant_Protection_DAS_spinBox.setValue(params.plant_protection_das[params.plant_protection_application_index])
         self.Plant_Protection_Dose_spinBox.setValue(params.plant_protection_dose[params.plant_protection_application_index])
         
@@ -2663,7 +2677,7 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         self.Plant_Date_Of_Sowing_dateEdit.blockSignals(False)
         self.Plant_Measurement_Date_dateEdit.blockSignals(False)
         self.Plant_Measurement_DAS_spinBox.blockSignals(False)
-        self.Plant_Phenological_Phase_spinBox.blockSignals(False)
+        self.Plant_Phenological_Phase_comboBox.blockSignals(False)
         self.Plant_Environment_Outside_radioButton.blockSignals(False)
         self.Plant_Environment_Inside_radioButton.blockSignals(False)
         self.Plant_Light_Source_Sun_radioButton.blockSignals(False)
@@ -2690,7 +2704,6 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         
     def update_params(self):
         params.plant_part_name = self.Plant_Part_Name_lineEdit.text()
-        params.plant_phenological_phase = self.Plant_Phenological_Phase_spinBox.value()
         
         if self.Plant_Environment_Outside_radioButton.isChecked(): params.plant_environment_outside = 1
         else: params.plant_environment_outside = 0
@@ -2725,6 +2738,7 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         
         if os.path.isfile(params.agriMRI_folder_structure + 'AgriMRI_Metadata.json') == True:
             params.load_AgriMRI_Metadata_file_json()
+            params.laod_phenological_phases_library()
             self.load_params()
         else:
             print('No .json AgriMRI metadata file!!')
@@ -2740,6 +2754,7 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         
         if os.path.isfile(params.agriMRI_folder_structure + 'AgriMRI_Metadata.json') == True:
             params.load_AgriMRI_Metadata_file_json()
+            params.laod_phenological_phases_library()
             self.load_params()
         else: print('No .json AgriMRI metadata file!!')
         
@@ -2753,6 +2768,7 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         
         if os.path.isfile(params.agriMRI_folder_structure + 'AgriMRI_Metadata.json') == True:
             params.load_AgriMRI_Metadata_file_json()
+            params.laod_phenological_phases_library()
             self.load_params()
         else: print('No .json AgriMRI metadata file!!')
         
@@ -2763,6 +2779,19 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         params.plant_species = params.plant_species_list[self.Plant_Species_comboBox.currentIndex()]
         params.plant_scientific_name = params.plant_species_library[self.Plant_Species_comboBox.currentIndex()][2]
         params.plant_taxonomy = params.plant_species_library[self.Plant_Species_comboBox.currentIndex()][3]
+        params.plant_BBCH_scale = params.plant_species_library[self.Plant_Species_comboBox.currentIndex()][4]
+        
+        params.laod_phenological_phases_library()
+        
+        params.plant_phenological_phase_index = 0
+        params.plant_phenological_phase = params.plant_phenological_phases_library [0][1]
+        
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Phenological_Phase(self):
+        params.plant_phenological_phase_index = self.Plant_Phenological_Phase_comboBox.currentIndex()
+        params.plant_phenological_phase = params.plant_phenological_phases_library [self.Plant_Phenological_Phase_comboBox.currentIndex()][1]
         self.load_params()
         params.saveFileAgriMRIParameter()
         
@@ -2782,6 +2811,13 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         
     def set_Measurement_Date(self):
         params.plant_measurement_date = self.Plant_Measurement_Date_dateEdit.date().toPyDate()
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_measurement_das = (params.plant_measurement_date - params.plant_date_of_sowing).days
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Measurement_Date_Today(self):
+        params.plant_measurement_date = datetime.date.today()
         params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
         params.plant_measurement_das = (params.plant_measurement_date - params.plant_date_of_sowing).days
         self.load_params()
@@ -9252,8 +9288,6 @@ class ConnectionDialog(Conn_Dialog_Base, Conn_Dialog_Form):
         super(ConnectionDialog, self).__init__(parent)
         self.setupUi(self)
         
-        self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'FreeSans', 'Piboto', 'Arial' !important; }")
-
         self.ui = loadUi('ui/connDialog.ui')
         screen = QDesktopWidget().availableGeometry()
         self.setGeometry(int((screen.width() - 500) / 2), int((screen.height() - 150) / 2), 500, 150)
@@ -9270,12 +9304,15 @@ class ConnectionDialog(Conn_Dialog_Base, Conn_Dialog_Form):
         IPvalidator = QRegExp(r'^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.)''{3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$')
         self.ip_box.setValidator(QRegExpValidator(IPvalidator, self))
         for item in params.hosts: self.ip_box.addItem(item)
+        
+        self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'Piboto Condensed', 'Arial' !important; }")
+        self.ip_box.setStyleSheet("{ font-family: 'Piboto Condensed', 'Arial'; }")
 
         self.mainwindow = parent
 
     def connect_event(self):
         params.ip = self.ip_box.currentText()
-        print(params.ip)
+        print('Console IP: ' + params.ip)
 
         connection = seq.conn_client()
 
@@ -9819,11 +9856,6 @@ class View3DLayersDialog(View3D_Dialog_Form, View3D_Dialog_Base):
                 return np.flip(np.rot90(data[:, :, slice_index]))
                 
 def run():
-    print('________________________________________________________')
-    print('Relax 2.0')
-    print('Programmed by Marcus Prier, Magdeburg, 2025')
-    print('________________________________________________________\n')
-
     app = QApplication(sys.argv)
     gui = MainWindow()
 

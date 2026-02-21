@@ -1,12 +1,12 @@
-index,common_name,scientific_name,taxonomy
-0,Wheat,Triticum,NCBI:txid4564
-1,Rice,Oryza sativa,NCBI:txid4530
-2,Corn(Maize),Zea mays,NCBI:txid4577
-3,Zucchini,Cucurbita pepo subsp. pepo,NCBI:txid3664
-4,Olive,Olea europaea,NCBI:txid4146
-5,Grape,Vitis vinifera,NCBI:txid29760
-6,Tomato,Solanum lycopersicon,NCBI:txid4081
-7,Onion,Allium cepa,NCBI:txid4679
-8,Potato,Solanum tuberosum,NCBI:txid4113
-9,Soy,Glycine max,NCBI:txid3847
-10,Salat,Lactuca,NCBI:txid4235
+index;common_name;scientific_name;taxonomy;BBCH-scale
+0;Wheat;Triticum;NCBI:txid4564;Cereals
+1;Rice;Oryza sativa;NCBI:txid4530;Rice
+2;Maize;Zea mays;NCBI:txid4577;Maize
+3;Zucchini;Cucurbita pepo subsp. pepo;NCBI:txid3664;Cucurbits
+4;Olive;Olea europaea;NCBI:txid4146;Olive
+5;Grapevine;Vitis vinifera;NCBI:txid29760;Grapevine
+6;Tomato;Solanum lycopersicon;NCBI:txid4081;Solanaceous fruits
+7;Onion;Allium cepa;NCBI:txid4679;Bulb vegetables
+8;Potato;Solanum tuberosum;NCBI:txid4113;Potato
+9;Soybean;Glycine max;NCBI:txid3847;Soybean
+10;Lettuce;Lactuca;NCBI:txid4235;Leaf vegetables

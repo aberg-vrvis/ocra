@@ -1,7 +1,7 @@
 ################################################################################
 #
 # Author: Marcus Prier
-# Date: 2025
+# Date: 2026
 #
 ################################################################################
 
@@ -23,8 +23,6 @@ from assembler import Assembler
 
 class sequence:
     def __init__(self):
-
-        params.loadParam()
         
         self.initVariables()
         
@@ -486,10 +484,10 @@ class sequence:
         socket.waitForConnected(1000)
 
         if socket.state() == connected :
-            print('Connection to server esteblished.')
+            print('Connection to console esteblished.')
             return True
         elif socket.state() == unconnected:
-            print('Conncection to server failed.')
+            print('Conncection to console failed.')
             return False
         else:
             print('TCP socket in state : ', socket.state())
@@ -500,8 +498,8 @@ class sequence:
             socket.disconnectFromHost()
         except: pass
         if socket.state() == unconnected :
-            print('Disconnected from server.')
-        else: print('Connection to server still established.')
+            print('Disconnected from console.')
+        else: print('Connection to console still established.')
 
 
     def initVariables(self):

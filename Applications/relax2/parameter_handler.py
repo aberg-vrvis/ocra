@@ -22,6 +22,7 @@ class Parameters:
         file.open(QFile.ReadOnly | QFile.Text)
         stream = QTextStream(file)
         self.stylesheet = stream.readAll()
+        
         self.cycler = cycler(color=['#000000', '#0000BB', '#BB0000'])
 
         self.ip = []
@@ -258,10 +259,9 @@ class Parameters:
         self.plant_part_name = ''
         self.plant_description = ''
         self.agriMRI_folder_structure = 'rawdata/'
-        self.plant_date_of_sowing = datetime.datetime.strptime('2026-01-01','%Y-%m-%d')
-        self.plant_measurement_date = datetime.datetime.strptime('2026-01-01','%Y-%m-%d')
+        self.plant_date_of_sowing = datetime.datetime.strptime('2025-01-01','%Y-%m-%d')
+        self.plant_measurement_date = datetime.datetime.strptime('2025-01-01','%Y-%m-%d')
         self.plant_measurement_das = 0
-        self.plant_phenological_phase = 0
         self.plant_environment_outside = 0
         self.plant_environment_inside = 0
         self.plant_light_source_sun = 0
@@ -292,8 +292,8 @@ class Parameters:
         f.close()
         for n in range(len(lines)-1):
             lines[n+1] = lines[n+1].strip()
-            self.plant_species_library.append(lines[n+1].split(','))
-        np.reshape(self.plant_species_library,(len(lines)-1, 4))
+            self.plant_species_library.append(lines[n+1].split(';'))
+        np.reshape(self.plant_species_library,(len(lines)-1, 5))
         
         self.plant_species_list = []
         for m in range(len(lines)-1): self.plant_species_list.append(self.plant_species_library[m][1])
@@ -302,14 +302,40 @@ class Parameters:
         self.plant_species = self.plant_species_library [0][1]
         self.plant_scientific_name = self.plant_species_library [0][2]
         self.plant_taxonomy = self.plant_species_library [0][3]
+        self.plant_BBCH_scale = self.plant_species_library [0][4]
         
+        del f
+        del lines
+        
+        self.plant_phenological_phases_library = []
+        _try: f = open('agriMRI/BBCH-scale_' + self.plant_BBCH_scale.lower() + '.csv', 'r')
+        except:
+            self.plant_BBCH_scale = 'General'
+            f = open('agriMRI/BBCH_scale_' + self.plant_BBCH_scale.lower() + '.csv', 'r')
+        lines = f.readlines()
+        f.close()
+        for n in range(len(lines)-1):
+            lines[n+1] = lines[n+1].strip()
+            parts = lines[n+1].split(';')
+            self.plant_phenological_phases_library.append([str(n), parts[0], parts[1]])
+        np.reshape(self.plant_phenological_phases_library,(len(lines)-1, 3))
+        
+        self.plant_phenological_phases_list = []
+        for m in range(len(lines)-1): self.plant_phenological_phases_list.append(self.plant_phenological_phases_library[m][1] + ' - ' + self.plant_phenological_phases_library[m][2])
+        
+        print('BBCH scale: ' + self.plant_BBCH_scale)
+        print('BBCH scale indexes: ' + str(len(lines)-1))
+        
+        self.plant_phenological_phase_index = int(self.plant_phenological_phases_library [0][0])
+        self.plant_phenological_phase = self.plant_phenological_phases_library [0][1]
+
     def AgriMRI_var_reset(self):
         print('Setting default AgriMRI parameters.')
         self.experiment_description = ''
         self.plant_part_name = ''
         self.plant_description = ''
-        self.plant_date_of_sowing = datetime.datetime.strptime('2026-01-01','%Y-%m-%d')
-        self.plant_measurement_date = datetime.datetime.strptime('2026-01-01','%Y-%m-%d')
+        self.plant_date_of_sowing = datetime.datetime.strptime('2025-01-01','%Y-%m-%d')
+        self.plant_measurement_date = datetime.datetime.strptime('2025-01-01','%Y-%m-%d')
         self.plant_measurement_das = 0
         self.plant_phenological_phase = 0
         self.plant_environment_outside = 0
@@ -342,8 +368,8 @@ class Parameters:
         f.close()
         for n in range(len(lines)-1):
             lines[n+1] = lines[n+1].strip()
-            self.plant_species_library.append(lines[n+1].split(','))
-        np.reshape(self.plant_species_library,(len(lines)-1,4))
+            self.plant_species_library.append(lines[n+1].split(';'))
+        np.reshape(self.plant_species_library,(len(lines)-1,5))
         
         self.plant_species_list = []
         for m in range(len(lines)-1): self.plant_species_list.append(self.plant_species_library[m][1])
@@ -352,6 +378,32 @@ class Parameters:
         self.plant_species = self.plant_species_library [0][1]
         self.plant_scientific_name = self.plant_species_library [0][2]
         self.plant_taxonomy = self.plant_species_library [0][3]
+        self.plant_BBCH_scale = self.plant_species_library [0][4]
+        
+        del f
+        del lines
+         
+        self.plant_phenological_phases_library = []
+        try: f = open('agriMRI/BBCH_scale_' + self.plant_BBCH_scale.lower() + '.csv', 'r')
+        except:
+            self.plant_BBCH_scale = 'General'
+            f = open('agriMRI/BBCH_scale_' + self.plant_BBCH_scale.lower() + '.csv', 'r')
+        lines = f.readlines()
+        f.close()
+        for n in range(len(lines)-1):
+            lines[n+1] = lines[n+1].strip()
+            parts = lines[n+1].split(';')
+            self.plant_phenological_phases_library.append([str(n), parts[0], parts[1]])
+        np.reshape(self.plant_phenological_phases_library,(len(lines)-1, 3))
+
+        self.plant_phenological_phases_list = []
+        for m in range(len(lines)-1): self.plant_phenological_phases_list.append(self.plant_phenological_phases_library[m][1] + ' - ' + self.plant_phenological_phases_library[m][2])
+        
+        print('BBCH scale: ' + self.plant_BBCH_scale)
+        print('BBCH scale indexes: ' + str(len(lines)-1))
+        
+        self.plant_phenological_phase_index = int(self.plant_phenological_phases_library [0][0])
+        self.plant_phenological_phase = self.plant_phenological_phases_library [0][1]
 
     def saveFileParameter(self):  
         with open('parameters.pkl', 'wb') as file:
@@ -600,6 +652,9 @@ class Parameters:
                          self.plant_date_of_sowing, \
                          self.plant_measurement_date, \
                          self.plant_measurement_das, \
+                         self.plant_BBCH_scale, \
+                         self.plant_phenological_phase_index, \
+                         self.plant_phenological_phases_list, \
                          self.plant_phenological_phase, \
                          self.plant_environment_outside, \
                          self.plant_environment_inside, \
@@ -900,6 +955,9 @@ class Parameters:
                 self.plant_date_of_sowing, \
                 self.plant_measurement_date, \
                 self.plant_measurement_das, \
+                self.plant_BBCH_scale, \
+                self.plant_phenological_phase_index, \
+                self.plant_phenological_phases_list, \
                 self.plant_phenological_phase, \
                 self.plant_environment_outside, \
                 self.plant_environment_inside, \
@@ -930,7 +988,30 @@ class Parameters:
         except:
             print('AgriMRI parameter could not have been restored, setting default.')
             self.AgriMRI_var_init()
+            
+    def laod_phenological_phases_library(self):
+        self.plant_phenological_phases_library = []
+        try: f = open('agriMRI/BBCH_scale_' + self.plant_BBCH_scale.lower() + '.csv', 'r')
+        except:
+            self.plant_BBCH_scale = 'General'
+            f = open('agriMRI/BBCH_scale_' + self.plant_BBCH_scale.lower() + '.csv', 'r')
+        lines = f.readlines()
+        f.close()
+        for n in range(len(lines)-1):
+            lines[n+1] = lines[n+1].strip()
+            parts = lines[n+1].split(';')
+            self.plant_phenological_phases_library.append([str(n), parts[0], parts[1]])
+        np.reshape(self.plant_phenological_phases_library,(len(lines)-1, 3))
+
+        self.plant_phenological_phases_list = []
+        for m in range(len(lines)-1): self.plant_phenological_phases_list.append(self.plant_phenological_phases_library[m][1] + ' - ' + self.plant_phenological_phases_library[m][2])
         
+        print('BBCH scale: ' + self.plant_BBCH_scale)
+        print('BBCH scale indexes: ' + str(len(lines)-1))
+        
+        for o in range(len(self.plant_phenological_phases_library)):
+                if self.plant_phenological_phases_library[o][1] == self.plant_phenological_phase: self.plant_phenological_phase_index = o
+                
     def save_header_file_txt(self):
         file = open(params.datapath + '_Header.txt','w')
 
@@ -1275,6 +1356,7 @@ class Parameters:
             'measurement': {
                 'Measurement date': self.plant_measurement_date.strftime('%Y-%m-%d'),
                 'Measurement DAS': self.plant_measurement_das,
+                'BBCH scale': self.plant_BBCH_scale,
                 'Phenological phase': self.plant_phenological_phase
             },
             'treatment': {
@@ -1332,6 +1414,7 @@ class Parameters:
             self.plant_date_of_sowing = datetime.datetime.strptime(jsonparams['general']['Date of sowing'],'%Y-%m-%d')
             self.plant_measurement_date = datetime.datetime.strptime(jsonparams['measurement']['Measurement date'],'%Y-%m-%d')
             self.plant_measurement_das = jsonparams['measurement']['Measurement DAS']
+            self.plant_BBCH_scale = jsonparams['measurement']['BBCH scale']
             self.plant_phenological_phase = jsonparams['measurement']['Phenological phase']
             self.plant_environment_outside = jsonparams['treatment']['environment']['Environment outside']
             self.plant_environment_inside = jsonparams['treatment']['environment']['Environment inside']

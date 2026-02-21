@@ -1,0 +1,110 @@
+code;description
+00 000;Dry seed
+01 001;Beginning of seed imbibition
+03 003;Seed imbibition complete
+05 005;Radicle emerged from seed
+07 007;Hypocotyl with cotyledons breaking through seed coat
+09 009;Emergence: cotyledons break through soil surface
+10 100;Cotyledons completely unfolded
+11 101;First true leaf on main stem fully unfolded
+12 102;2nd true leaf on main stem unfolded
+13 103;3rd true leaf on main stem unfolded
+14 104;4th true leaf on main stem unfolded
+15 105;5th true leaf on main stem unfolded
+16 106;6th true leaf on main stem unfolded
+17 107;7th true leaf on main stem unfolded
+18 108;8th true leaf on main stem unfolded
+19 109;9 or more leaves on main stem unfolded (2digit), 9th leaf unfolded on main stem (3digit)
+-- 110;10th leaf on main stem unfolded
+-- 111;11th leaf on main stem unfolded
+-- 112;12th leaf on main stem unfolded
+-- 113;13th leaf on main stem unfolded
+-- 114;14th leaf on main stem unfolded
+-- 115;15th leaf on main stem unfolded
+-- 116;16th leaf on main stem unfolded
+-- 117;17th leaf on main stem unfolded
+-- 118;18th leaf on main stem unfolded
+-- 119;19th leaf on main stem unfolded
+21 201;First primary side shoot visible
+22 202;2nd primary side shoot visible
+23 203;3rd primary side shoot visible
+24 204;4th primary side shoot visible
+25 205;5th primary side shoot visible
+26 206;6th primary side shoot visible
+27 207;7th primary side shoot visible
+28 208;8th primary side shoot visible
+29 209;9 or more primary side shoots visible
+-- 221;First secondary side shoot visible
+-- 222;2nd secondary side shoot visible
+-- 223;3rd secondary side shoot visible
+-- 224;4th secondary side shoot visible
+-- 225;5th secondary side shoot visible
+-- 226;6th secondary side shoot visible
+-- 227;7th secondary side shoot visible
+-- 228;8th secondary side shoot visible
+-- 229;9th secondary side shoot visible
+-- 231;First tertiary side shoot visible
+51 501;First flower initial with elongated ovary visible on main stem
+52 502;2nd flower initial with elongated ovary visible on main stem
+53 503;3rd flower initial with elongated ovary visible on main stem
+54 504;4th flower initial with elongated ovary visible on main stem
+55 505;5th flower initial with elongated ovary visible on main stem
+56 506;6th flower initial with elongated ovary visible on main stem
+57 507;7th flower initial with elongated ovary visible on main stem
+58 508;8th flower initial with elongated ovary visible on main stem
+59 509;9 (or more) flower initials with elongated ovary already visible on main stem
+-- 510;10 (or more) flower initials with elongated ovary already visible on main stem
+-- 511;11 (or more) flower initials with elongated ovary already visible on main stem
+-- 512;12 (or more) flower initials with elongated ovary already visible on main stem
+-- 513;13 (or more) flower initials with elongated ovary already visible on main stem
+-- 514;14 (or more) flower initials with elongated ovary already visible on main stem
+-- 515;15 (or more) flower initials with elongated ovary already visible on main stem
+-- 516;16 (or more) flower initials with elongated ovary already visible on main stem
+-- 517;17 (or more) flower initials with elongated ovary already visible on main stem
+-- 518;18 (or more) flower initials with elongated ovary already visible on main stem
+-- 519;19 ore more flower initials with elongated ovary already visible on main stem
+-- 521;First flower initial visible on a secondary side shoot
+-- 531;First flower initial visible on a tertiary side shoot
+61 601;First flower open on main stem
+62 602;2nd flower open on main stem
+63 603;3rd flower open on main stem
+64 604;4th flower open on main stem
+65 605;5th flower open on main stem
+66 606;6th flower open on main stem
+67 607;7th flower open on main stem
+68 608;8th flower open on main stem
+69 609;9th flower open on main stem or 9 flowers on main stem already open
+-- 610;10th flower open on main stem or 10 flowers on main stem already open
+-- 611;11th flower open on main stem or 11 flowers on main stem already open
+-- 612;12th flower open on main stem or 12 flowers on main stem already open
+-- 613;13th flower open on main stem or 13 flowers on main stem already open
+-- 614;14th flower open on main stem or 14 flowers on main stem already open
+-- 615;15th flower open on main stem or 15 flowers on main stem already open
+-- 616;16th flower open on main stem or 16 flowers on main stem already open
+-- 617;17th flower open on main stem or 17 flowers on main stem already open
+-- 618;18th flower open on main stem or 18 flowers on main stem already open
+-- 619;19th flower open on man stem ore more than 19 flowers on main stem already open
+-- 621;First flower on secondary side shoot open
+-- 631;First flower on tertiary side shoot open
+71 701;First fruit on main stem has reached typical size and form
+72 702;2nd fruit on main stem has reached typical size and form
+73 703;3rd fruit on main stem has reached typical size and form
+74 704;4th fruit on main stem has reached typical size and form
+75 705;5th fruit on main stem has reached typical size and form
+76 706;6th fruit on main stem has reached typical size and form
+77 707;7th fruit on main stem has reached typical size and form
+78 708;8th fruit on main stem has reached typical size and form
+79 709;9 or more fruits on main stem has reached typical size and form
+-- 721;First fruit on a secondary side shoot has reached typical size and form
+-- 731;First fruit on a tertiary side shoot has reached typical size and form
+81 801;10% of fruits show typical fully ripe colour
+82 802;20% of fruits show typical fully ripe colour
+83 803;30% of fruits show typical fully ripe colour
+84 804;40% of fruits show typical fully ripe colour
+85 805;50% of fruits show typical fully ripe colour
+86 806;60% of fruits show typical fully ripe colour
+87 807;70% of fruits show typical fully ripe colour
+88 808;80% of fruits show typical fully ripe colour
+89 809;Fully ripe: fruits have typical fully ripe colour
+97 907;Plants dead
+99 909;Harvested product (seeds)

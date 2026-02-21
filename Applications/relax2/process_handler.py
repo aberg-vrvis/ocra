@@ -30,9 +30,7 @@ from parameter_handler import params
 
 class process:
     def __init__(self):
-
-        params.loadParam()
-        params.loadData()
+        pass
 
     def motor_move(self, motor=None):
         if motor is not None and params.motor_actual_position != params.motor_goto_position:                     

@@ -1,0 +1,47 @@
+code;description
+00;Dry seed (caryopsis)
+01;Beginning of seed imbibition
+03;Seed imbibition complete
+05;Radicle emerged from caryopsis
+06;Radicle elongated, root hairs and /or side roots visible
+07;Coleptile emerged from caryopsis
+09;Emergence: coleoptile penetrates soil surface (cracking stage)
+10;First leaf through coleoptile
+11;First leaf unfolded
+12;2 leaves unfolded
+13;3 leaves unfolded
+14;4 leaves unfolded
+15;5 leaves unfolded
+16;6 leaves unfolded
+17;7 leaves unfolded
+18;8 leaves unfolded
+19;9 or more leaves unfolded
+30;Beginning of stem elongation
+31;First node detectable
+32;2 nodes detectable
+33;3 nodes detectable
+34;4 nodes detectable
+35;5 nodes detectable
+36;6 nodes detectable
+37;7 nodes detectable
+38;8 nodes detectable
+39;9 or more nodes detectable
+51;Beginning of tassel emergence: tassel detectable at top of stem
+53;Tip of tassel visible
+55;Middle of tassel emergence: middle of tassel begins to separate
+59;End of tassel emergence: tassel fully emerged and separated
+61;Male: stamens in middle of tassel visible, Female: tip of ear emerging from leaf sheath
+63;Male: beginning of pollen shedding, Female: tips of stigmata visible
+65;Male: upper and lower parts of tassel in flower, Female: stigmata fully emerged
+67;Male: flowering completed, Female: stigmata drying
+69;End of flowering: stigmata completely dry
+71;Beginning of grain development: kernels at blister stage, about 16% dry matter
+73;Early milk
+75;Kernels in middle of cob yellowish-white (variety-dependent), content milky, about 40% dry matter
+79;Nearly all kernels have reached final size
+83;Early dough: kernel content soft, about 45% dry matter
+85;Dough stage: kernels yellowish to yellow (variety dependent), about 55% dry matter
+87;Physiological maturity: black dot/layer visible at base of kernels, about 60% dry matter
+89;Fully ripe: kernels hard and shiny, about 65% dry matter
+97;Plant dead and collapsing
+99;Harvested product

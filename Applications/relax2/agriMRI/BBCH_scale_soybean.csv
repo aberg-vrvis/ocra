@@ -1,0 +1,89 @@
+code;description
+00 000;Dry seed
+01 001;Beginning of seed imbibition
+03 003;Seed imbibition complete
+05 005;Radicle emerged from seed
+06 006;Elongation of radicle. Formation of root hairs
+07 007;Hypocotyl with cotyledons breaking through seed coat
+08 008;Hypocotyl reaches the soil surface. Hypocotyl arch visible
+09 009;Emergence: hypocotyl with cotyledons emerged above soil surface (“cracking stage”)
+10 100;Cotyledons completely unfolded
+11 101;First pair of true leaves unfolded (unifoliolate leaves on the first node)
+12 102;Trifoliolate leaf on the 2nd node unfolded
+13 103;Trifoliolate leaf on the 3rd node unfolded
+14 104;Trifoliolate leaf on the 4th node unfolded
+15 105;Trifoliolate leaf on the 5th node unfolded
+16 106;Trifoliolate leaf on the 6th node unfolded
+17 107;Trifoliolate leaf on the 7th node unfolded
+18 108;Trifoliolate leaf on the 8th node unfolded
+19 109;Trifoliolate leaf on the 9th node unfolded. No side shoots visible
+-- 110;Trifoliolate leaf on the 10th node unfolded
+-- 111;Trifoliolate leaf on the 11th node unfolded
+-- 112;Trifoliolate leaf on the 12th node unfolded
+-- 113;Trifoliolate leaf on the 13th node unfolded
+-- 114;Trifoliolate leaf on the 14th node unfolded
+-- 115;Trifoliolate leaf on the 15th node unfolded
+-- 116;Trifoliolate leaf on the 16th node unfolded
+-- 117;Trifoliolate leaf on the 17th node unfolded
+-- 118;Trifoliolate leaf on the 18th node unfolded
+-- 119;Trifoliolate leaf on the 19th node unfolded
+21 201;First side shoot visible
+22 202;2nd side shoot of first order visible
+23 203;3rd side shoot of first order visible
+24 204;4th side shoot of first order visible
+25 205;5th side shoot of first order visible
+26 206;6th side shoot of first order visible
+27 207;7th side shoot of first order visible
+28 208;8th side shoot of first order visible
+29 209;9 or more side shoots of first order visible (2 digit), 9th side shoot of first order visible (3 digit)
+-- 210;10th side shoot of first order visible
+-- 221;First side shoot of 2nd order visible
+-- 222;2nd side shoot of 2nd order visible
+-- 223;3rd side shoot of 2nd order visible
+-- 224;4th side shoot of 2nd order visible
+-- 225;5th side shoot of 2nd order visible
+-- 226;6th side shoot of 2nd order visible
+-- 227;7th side shoot of 2nd order visible
+-- 228;8th side shoot of 2nd order visible
+-- 229;9th side shoot of 2nd order visible
+-- 2N1;First side shoot of Nth order visible
+-- 2N9;9th side shoot of Nth order visible
+49 409;Harvestable vegetative plant parts have reached final size (Cutting of soybean plants for feeding purposes)
+51 501;First flower buds visible
+55 505;First flower buds enlarged
+59 509;First flower petals visible, flower buds still closed
+60 600;First flowers opened (sporadically in population)
+61 601;Beginning of flowering: about 10% of flowers open. Beginning of flowering
+62 602;About 20% of flowers open
+63 603;About 30% of flowers open
+64 604;About 40% of flowers open
+65 605;Full flowering: about 50% of flowers open. Main period of flowering
+66 606;About 60% of flowers open
+67 607;Flowering declining
+69 609;End of flowering: first pods visible (approx. 5 mm length)
+70 700;First pod reached final length (15–20 mm)
+71 701;About 10% of pods have reached final length (15–20 mm). Beginning of pod development
+72 702;About 20% of pods have reached final length (15–20 mm)
+73 703;About 30% of pods have reached final length (15–20 mm). Beginning of pod filling
+74 704;About 40% of pods have reached final length (15–20 mm)
+75 705;About 50% of pods have reached final length (15–20 mm). Continuation of pod filling. Main period of pod development Continuation of pod filling
+77 707;About 70% of pods have reached final length (15–20 mm). Advanced pod filling. Advanced pod filling
+79 709;Approx. all pods have reached final length (15–20 mm). Seeds filling the cavity of the majority of pods
+80 800;First pod ripe, beans final colour, dry and hard
+81 801;Beginning of ripening. About 10% of pods are ripe, beans final colour, dry and hard. Beginning of pod and seed ripening
+82 802;About 20% of pods are ripe. Beans final colour, dry and hard
+83 803;About 30% of pods are ripe. Beans final colour, dry and hard
+84 804;About 40% of pods are ripe. Beans final colour, dry and hard
+85 805;Advanced ripening. About 50% of pods are ripe. Beans final colour, dry and hard. Main period of pod and seed ripening
+86 806;About 60% of pods are ripe. Beans final colour, dry and hard
+87 807;About 70% of pods are ripe. Beans final colour, dry and hard
+88 808;About 80% of pods are ripe. Beans final colour, dry and hard
+89 809;Full maturity: approx. all pods are ripe. Beans final colour, dry and hard (= Harvest maturity). Majority of pods are ripe. Beans final colour, dry and hard
+91 901;About 10% of leaves discoloured or fallen
+92 902;About 20% of leaves discoloured or fallen
+93 903;About 30% of leaves discoloured or fallen
+94 904;About 40% of leaves discoloured or fallen
+95 905;About 50% of leaves discoloured or fallen
+96 906;About 60% of leaves discoloured or fallen
+97 907;Above ground parts of plants dead
+99 909;Harvested product (seeds)
