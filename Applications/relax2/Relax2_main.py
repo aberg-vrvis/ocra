@@ -31,8 +31,8 @@ from PyQt5 import QtWidgets
 from PyQt5.QtSerialPort import QSerialPortInfo, QSerialPort
 from PyQt5.QtWidgets import QMessageBox, QApplication, QFileDialog, QDesktopWidget, QFrame, QTableWidget, QTableWidgetItem
 from PyQt5.uic import loadUiType, loadUi
-from PyQt5.QtCore import QRegExp, pyqtSignal, QStandardPaths, QIODevice, QObject, QTimer
-from PyQt5.QtGui import QRegExpValidator, QPixmap
+from PyQt5.QtCore import QRegExp, pyqtSignal, QStandardPaths, QIODevice, QObject, QTimer, QUrl
+from PyQt5.QtGui import QRegExpValidator, QPixmap, QDesktopServices
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -2505,7 +2505,7 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
 
         self.ui = loadUi('ui/agriMRI.ui')
         self.setWindowTitle('AgriMRI Metadata')
-        self.setGeometry(420, 40, 750, 960)
+        self.setGeometry(420, 40, 750, 1000)
         
         self.Experiment_ID_lineEdit.editingFinished.connect(lambda: self.set_Experiment_ID())
         self.Plant_ID_lineEdit.editingFinished.connect(lambda: self.set_Plant_ID())
@@ -2527,6 +2527,8 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         self.Plant_Phenological_Phase_comboBox.addItems(params.plant_phenological_phases_list)
         self.Plant_Phenological_Phase_comboBox.setCurrentIndex(0)
         self.Plant_Phenological_Phase_comboBox.currentIndexChanged.connect(lambda: self.set_Phenological_Phase())
+        
+        self.Plant_Show_Phase_Images_pushButton.clicked.connect(lambda: self.show_Phase_Images())
         
         self.Plant_Environment_Outside_radioButton.toggled.connect(self.update_params)
         self.Plant_Environment_Inside_radioButton.toggled.connect(self.update_params)
@@ -2612,7 +2614,6 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         self.Plant_Protection_Date_dateEdit.blockSignals(True)
         self.Plant_Protection_DAS_spinBox.blockSignals(True)
         self.Plant_Protection_Dose_spinBox.blockSignals(True)
-
         self.Plant_Species_comboBox.setCurrentIndex(params.plant_species_index)
         self.Plant_Scientific_Name_lineEdit.setText(params.plant_scientific_name)
         self.Plant_Taxonomy_lineEdit.setText(params.plant_taxonomy)
@@ -2794,6 +2795,15 @@ class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
         params.plant_phenological_phase = params.plant_phenological_phases_library [self.Plant_Phenological_Phase_comboBox.currentIndex()][1]
         self.load_params()
         params.saveFileAgriMRIParameter()
+        
+    def show_Phase_Images(self):
+        if params.plant_BBCH_scale == 'Cereals': page_number = 18
+        elif params.plant_BBCH_scale == 'Rice': page_number = 23
+        elif params.plant_BBCH_scale == 'Maize': page_number = 27
+        elif params.plant_BBCH_scale == 'Cucurbits': page_number = 134
+        elif params.plant_BBCH_scale == 'Soybean': page_number = 99
+        else: page_number = 10
+        QDesktopServices.openUrl(QUrl('https://www.openagrar.de/servlets/MCRFileNodeServlet/openagrar_derivate_00010428/BBCH-Skala_en.pdf#page=' + str(page_number)))
         
     def set_Date_Of_Sowing(self):
         params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()

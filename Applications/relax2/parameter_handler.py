@@ -308,7 +308,7 @@ class Parameters:
         del lines
         
         self.plant_phenological_phases_library = []
-        try: f = open('agriMRI/BBCH-scale_' + self.plant_BBCH_scale.lower() + '.csv', 'r')
+        try: f = open('agriMRI/BBCH_scale_' + self.plant_BBCH_scale.lower() + '.csv', 'r')
         except:
             self.plant_BBCH_scale = 'General'
             f = open('agriMRI/BBCH_scale_' + self.plant_BBCH_scale.lower() + '.csv', 'r')
