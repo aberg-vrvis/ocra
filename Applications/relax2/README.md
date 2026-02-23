@@ -23,7 +23,7 @@ you can debug this with:
 ```
 QT_DEBUG_PLUGINS=1 poetry run python3 Relax2_main.py
 ```
-Likely you will find that the xcb plugin not installed correctly.
+Likely you will find that the xcb plugin is not installed correctly.
 
 To use the latest development version of Relax2.0 you need to update the relax2 folder on your host computer (here a RaspberryPi) and the server and binaries files on the Red Pitaya 125-14 (see server folder README)!!!
 
@@ -54,7 +54,7 @@ Boot up the raspberry and finish the initial setup.
 - Password (default): raspberry
 
 Make sure you have a working internet connection and port 123 is not blocked. 
-This is confirmed when the timesync and update at the end of the initial setup is successfull.
+This is confirmed when the timesync and update at the end of the initial setup is successful.
 
 Setup the LAN port IPs for the Raspberry and the Red Pitaya:
 
