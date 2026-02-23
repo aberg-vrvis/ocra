@@ -9306,7 +9306,7 @@ class ConnectionDialog(Conn_Dialog_Base, Conn_Dialog_Form):
         for item in params.hosts: self.ip_box.addItem(item)
         
         self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'Piboto Condensed', 'Arial' !important; }")
-        self.ip_box.setStyleSheet("{ font-family: 'Piboto Condensed', 'Arial'; }")
+        self.ip_box.setStyleSheet("font-family: 'Piboto Condensed', 'Arial';")
 
         self.mainwindow = parent
 

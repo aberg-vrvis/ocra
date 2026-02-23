@@ -24,6 +24,8 @@ from assembler import Assembler
 class sequence:
     def __init__(self):
         
+        #params.loadParam()
+        
         self.initVariables()
         
         self.seq_fid = 'sequences/spectroscopy/FID.txt'
@@ -550,6 +552,7 @@ class sequence:
         while(True):
             if not socket.waitForBytesWritten():
                 break
+        print('Shims [mA]: ', params.grad)
         print('Set shims!')
         
     # Free Induction Decay sequence    
