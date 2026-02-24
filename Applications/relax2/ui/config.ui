@@ -329,11 +329,6 @@
         <height>30</height>
        </size>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
       <property name="layoutDirection">
        <enum>Qt::LeftToRight</enum>
       </property>
@@ -544,11 +539,6 @@
         <height>30</height>
        </size>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
       <property name="text">
        <string>Measurment Time Dialog</string>
       </property>
@@ -749,7 +739,6 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>9</pointsize>
         <weight>75</weight>
         <bold>true</bold>
        </font>
@@ -846,7 +835,6 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>9</pointsize>
         <weight>75</weight>
         <bold>true</bold>
        </font>
@@ -1172,11 +1160,6 @@
           <height>30</height>
          </size>
         </property>
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-         </font>
-        </property>
         <property name="text">
          <string>Complex</string>
         </property>
@@ -1198,11 +1181,6 @@
           <width>55</width>
           <height>30</height>
          </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-         </font>
         </property>
         <property name="text">
          <string>Abs</string>
@@ -1496,11 +1474,6 @@
         <width>200</width>
         <height>30</height>
        </size>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>Marker-IsoCenter Distance [mm]</string>
@@ -1799,11 +1772,6 @@
           <width>190</width>
           <height>30</height>
          </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>11</pointsize>
-         </font>
         </property>
         <property name="text">
          <string>Auto Recenter (Imaging)</string>
@@ -2200,7 +2168,6 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>9</pointsize>
         <weight>75</weight>
         <bold>true</bold>
        </font>
@@ -2301,11 +2268,6 @@
         <width>200</width>
         <height>30</height>
        </size>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>GRO Prephaser Length Scaler</string>
@@ -2444,7 +2406,6 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
         <weight>75</weight>
         <bold>true</bold>
        </font>

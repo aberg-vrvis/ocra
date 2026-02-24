@@ -71,7 +71,6 @@
         </property>
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
           <italic>true</italic>
          </font>
         </property>
@@ -663,7 +662,6 @@
         </property>
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
           <italic>true</italic>
          </font>
         </property>
@@ -1488,11 +1486,6 @@
           <height>30</height>
          </size>
         </property>
-        <property name="font">
-         <font>
-          <pointsize>12</pointsize>
-         </font>
-        </property>
         <property name="text">
          <string>Water Availability [%]</string>
         </property>
@@ -1734,11 +1727,6 @@
             <width>200</width>
             <height>30</height>
            </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>12</pointsize>
-           </font>
           </property>
           <property name="text">
            <string>Experiment Description</string>

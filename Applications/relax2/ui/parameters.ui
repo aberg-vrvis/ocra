@@ -1983,11 +1983,6 @@
         <height>30</height>
        </size>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
-      </property>
       <property name="text">
        <string>Total Movement Length [mm]</string>
       </property>
@@ -2159,11 +2154,6 @@
         <width>200</width>
         <height>30</height>
        </size>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>11</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>Radial Oversampling Factor</string>

@@ -334,11 +334,6 @@
         <height>30</height>
        </size>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
       <property name="text">
        <string>Save Pha Image Data</string>
       </property>
@@ -360,11 +355,6 @@
         <width>200</width>
         <height>30</height>
        </size>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>Save Spectrum/T1/T2 Data</string>
@@ -544,11 +534,6 @@
         <width>150</width>
         <height>30</height>
        </size>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>Save Mag Image Data</string>

@@ -91,7 +91,7 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
         self.setWindowTitle('Relax 2.0')
         params.load_GUItheme()
         self.setStyleSheet(params.stylesheet)
-        self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'Piboto Condensed', 'Arial' !important; }")
+        self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'Piboto Condensed', 'Arial Narrow'; font-size: 12pt;}")
         self.setGeometry(10, 40, 400, 410)
         
         params.GUImode = 0
@@ -2144,6 +2144,14 @@ class ConfigWindow(Config_Window_Form, Config_Window_Base):
         self.PB_Marker_Cal_Apply_pushButton.clicked.connect(lambda: self.Set_PB_Marker_IsoCenter_Distance())
         
         self.AgriMRI_Mode_radioButton.toggled.connect(self.update_params)
+        
+        self.label_16.setStyleSheet('font-size: 8pt')
+        self.label_17.setStyleSheet('font-size: 8pt')
+        self.label_18.setStyleSheet('font-size: 8pt')
+        self.label_32.setStyleSheet('font-size: 8pt')
+        
+        self.label_25.setStyleSheet('font-size: 10pt')
+        self.label_47.setStyleSheet('font-size: 10pt')
 
     def frequency_center(self):
         params.frequency = params.centerfrequency
@@ -3002,6 +3010,11 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
         self.ErnstAngleCalculator_T1_spinBox.valueChanged.connect(self.update_ernstanglecalc)
         self.ErnstAngleCalculator_TR_spinBox.valueChanged.connect(self.update_ernstanglecalc)
         self.update_ernstanglecalc()
+        
+        self.label_27.setStyleSheet('font-size: 8pt')
+        self.label_29.setStyleSheet('font-size: 8pt')
+        
+        self.label_36.setStyleSheet('font-size: 10pt')
         
     def load_params(self):
         if params.toolautosequence == 1: self.Tool_Auto_Sequence_radioButton.setChecked(True)
@@ -9315,8 +9328,8 @@ class ConnectionDialog(Conn_Dialog_Base, Conn_Dialog_Form):
         self.ip_box.setValidator(QRegExpValidator(IPvalidator, self))
         for item in params.hosts: self.ip_box.addItem(item)
         
-        self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'Piboto Condensed', 'Arial' !important; }")
-        self.ip_box.setStyleSheet("font-family: 'Piboto Condensed', 'Arial';")
+        self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'Piboto Condensed', 'Arial Narrow'; font-size: 12pt;}")
+        self.ip_box.setStyleSheet("font-family: 'Piboto Condensed', 'Arial Narrow'; font-size: 12pt;")
 
         self.mainwindow = parent
 
