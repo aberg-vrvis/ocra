@@ -211,7 +211,7 @@ class Parameters:
         self.SAR_power_unit = 'mW'
         self.SAR_max_power = 15
         self.headerfileformat = 1
-        self.motor_enable = 1
+        self.motor_enable = 0
         self.motor_available = 0
         self.motor_port = []
         self.motor_axis_limit_negative = 0
@@ -248,7 +248,7 @@ class Parameters:
         self.PB_marker_isocenter_distance = 120
         self.Ref_PB_marker_isocenter_distance = 120
         self.PB_isocenter_position = 0
-        self.agriMRI_mode = 1
+        self.agriMRI_mode = 0
         
     def AgriMRI_var_init(self):
         print('Setting default AgriMRI parameters.')
