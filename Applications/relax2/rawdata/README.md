@@ -1,6 +1,6 @@
 In this folder you will find the acquired rawdata.
 
-Exsample rawdata can be downloaded here:
+Example rawdata can be downloaded here:
 
 https://data.stimulate.ovgu.de/f/675009ce02fa4cbda49d/
 
@@ -19,5 +19,5 @@ There is rawdata for:
 3. Overwrite the rawdata path name in the Relax2.0 main window, like: rawdata/Exsample_Image_rawdata_2Holes_2DSE_TE10ms_TS3ms_TR4s_FOV12mm_Res128
 4. Click on "Data Process" in the Relax2.0 main window. 
 
-Hints: Its nomally not necessary to enter the parameters. There are only a few exeptions like 3D slice or 3D FFT imaging.
+Hints: It is normally not necessary to enter the parameters. There are only a few exceptions like 3D slice or 3D FFT imaging.
 
