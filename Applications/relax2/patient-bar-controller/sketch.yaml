@@ -1,0 +1,4 @@
+default_board: arduino:megaavr:nano_every
+libraries:
+  - name: "StepperDriver"
+    version: 1.5.0

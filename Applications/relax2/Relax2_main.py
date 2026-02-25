@@ -1,7 +1,7 @@
 ################################################################################
 #
 # Author: Marcus Prier
-# Date: 2025
+# Date: 2026
 #
 ################################################################################
 
@@ -11,6 +11,7 @@ import numpy as np
 import os
 import math
 import time
+import datetime
 import shutil
 
 import serial
@@ -20,19 +21,18 @@ import zlib
 import struct
 from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QVBoxLayout
 from PyQt5.QtCore import Qt, QSize, QRect
+from PyQt5.QtWidgets import QDesktopWidget
 from enum import Enum
 
 import json
-
-from datetime import datetime
 
 # import PyQt5 packages
 from PyQt5 import QtWidgets
 from PyQt5.QtSerialPort import QSerialPortInfo, QSerialPort
 from PyQt5.QtWidgets import QMessageBox, QApplication, QFileDialog, QDesktopWidget, QFrame, QTableWidget, QTableWidgetItem
 from PyQt5.uic import loadUiType, loadUi
-from PyQt5.QtCore import QRegExp, pyqtSignal, QStandardPaths, QIODevice, QObject, QTimer
-from PyQt5.QtGui import QRegExpValidator, QPixmap
+from PyQt5.QtCore import QRegExp, pyqtSignal, QStandardPaths, QIODevice, QObject, QTimer, QUrl
+from PyQt5.QtGui import QRegExpValidator, QPixmap, QDesktopServices
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -40,7 +40,14 @@ from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 from matplotlib.image import NonUniformImage
 
+print('________________________________________________________\n')
+print('Relax 2.0')
+print('Marcus Prier, Magdeburg, 2026')
+print('________________________________________________________\n')
+
 from parameter_handler import params
+params.loadParam()
+params.loadData()
 from sequence_handler import seq
 from process_handler import proc
 from data_logger import logger
@@ -57,6 +64,7 @@ Main_Window_Form, Main_Window_Base = loadUiType('ui/mainwindow.ui')
 Conn_Dialog_Form, Conn_Dialog_Base = loadUiType('ui/connDialog.ui')
 Para_Window_Form, Para_Window_Base = loadUiType('ui/parameters.ui')
 Config_Window_Form, Config_Window_Base = loadUiType('ui/config.ui')
+AgriMRI_Window_Form, AgriMRI_Window_Base = loadUiType('ui/agriMRI.ui')
 Plot_Window_Form, Plot_Window_Base = loadUiType('ui/plotview.ui')
 Tools_Window_Form, Tools_Window_Base = loadUiType('ui/tools.ui')
 Protocol_Window_Form, Protocol_Window_Base = loadUiType('ui/protocol.ui')
@@ -77,11 +85,13 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
         self.dialog_prot = None
         self.dialog_sarmonitor = None
         self.dialog_motortools = None
+        self.dialog_agri = None
 
         self.ui = loadUi('ui/mainwindow.ui')
         self.setWindowTitle('Relax 2.0')
         params.load_GUItheme()
         self.setStyleSheet(params.stylesheet)
+        self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'Piboto Condensed', 'Arial Narrow'; font-size: 16px;}")
         self.setGeometry(10, 40, 400, 410)
         
         params.GUImode = 0
@@ -95,6 +105,8 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
         params.usphaseidx = 2
         params.flipangletime = 90
         params.flipangleamplitude = 90
+        params.RFpulseamplitude = 16382
+        params.flippulseamplitude = 16382
         params.flippulselength = int(params.RFpulselength / 90 * params.flipangletime)
         params.flippulseamplitude = int(params.RFpulseamplitude / 90 * params.flipangleamplitude)
         params.average = 0
@@ -112,19 +124,22 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
         params.motor_available = 0
         params.motor_actual_position = 0
         params.motor_goto_position = 0
-
+        
+        if params.agriMRI_mode == 1:
+            params.AgriMRI_var_init()
+        
         self.motor = None
         self.motor_reader = None
         
         if params.motor_enable:
             self.motor_connect()
+            
+        self.establish_conn()
 
         if params.GSamplitude == 0:
             params.GSposttime = 0
         else:
             params.GSposttime = int((200 * params.GSamplitude + 4 * params.flippulselength * params.GSamplitude) / 2 - 200 * params.GSamplitude / 2) / (params.GSamplitude / 2)
-        
-        self.establish_conn()
 
         self.Mode_Spectroscopy_pushButton.clicked.connect(lambda: self.switch_GUImode(0))
         self.Mode_Imaging_pushButton.clicked.connect(lambda: self.switch_GUImode(1))
@@ -134,6 +149,8 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
         self.Mode_Image_Stitching_pushButton.clicked.connect(lambda: self.switch_GUImode(5))
         self.Tools_pushButton.clicked.connect(lambda: self.tools())
         self.Protocol_pushButton.clicked.connect(lambda: self.protocol())
+        
+        self.AgriMRI_Metadata_pushButton.clicked.connect(lambda: self.agri_window())
 
         self.Sequence_comboBox.clear()
         self.Sequence_comboBox.addItems(['Please select mode!'])
@@ -251,7 +268,7 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
     def switch_GUImode(self, mode):
         params.GUImode = mode
 
-        print('GUImode:\t', params.GUImode)
+        print('GUImode: ' + str(params.GUImode))
 
         if params.GUImode == 0:
             self.Sequence_comboBox.clear()
@@ -262,10 +279,13 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                                             , 'Inversion Recovery (SE, Slice)', 'Saturation Inversion Recovery (FID, Slice)', 'Saturation Inversion Recovery (SE, Slice)' \
                                             , 'Echo Planar Spectrum (FID, 4 Echos, Slice)', 'Echo Planar Spectrum (SE, 4 Echos, Slice)', 'Turbo Spin Echo (4 Echos, Slice)' \
                                             , 'RF Loopback Test Sequence (Rect, Flip)', 'RF Loopback Test Sequence (Rect, 180°)', 'RF Loopback Test Sequence (Sinc, Flip)' \
-                                            , 'RF Loopback Test Sequence (Sinc, 180°)', 'Gradient Test Sequence', 'RF SAR Calibration Test Sequence'])
+                                            , 'RF Loopback Test Sequence (Sinc, 180°)', 'RF Loopback Test Sequence (Rect, inverse Flip)', 'RF Loopback Test Sequence (Rect, inverse 180°)' \
+                                            , 'RF Loopback Test Sequence (Sinc, inverse Flip)', 'RF Loopback Test Sequence (Sinc, inverse 180°)', 'Gradient Test Sequence' \
+                                            , 'RF SAR Calibration Test Sequence'])
             self.Sequence_comboBox.setCurrentIndex(0)
-            self.Datapath_lineEdit.setText('rawdata/Spectrum_rawdata')
-            params.datapath = self.Datapath_lineEdit.text()
+            if params.agriMRI_mode == 1: params.datapath = 'Spectrum_rawdata'
+            else: params.datapath = 'rawdata/Spectrum_rawdata'
+            self.Datapath_lineEdit.setText(params.datapath)
         elif params.GUImode == 1:
             self.Sequence_comboBox.clear()
             self.Sequence_comboBox.addItems(['2D Radial (GRE, Full)', '2D Radial (SE, Full)', '2D Radial (GRE, Half)' \
@@ -282,32 +302,36 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                                             , 'WIP 2D Flow Compensation (Slice, GRE)', 'WIP 2D Flow Compensation (Slice, SE)', 'WIP 3D FFT Gradient Echo (Slab)' \
                                             , '3D FFT Spin Echo (Slab)', '3D FFT Turbo Spin Echo (Slab)'])
             self.Sequence_comboBox.setCurrentIndex(0)
-            self.Datapath_lineEdit.setText('rawdata/Image_rawdata')
-            params.datapath = self.Datapath_lineEdit.text()
+            if params.agriMRI_mode == 1: params.datapath = 'Image_rawdata'
+            else: params.datapath = 'rawdata/Image_rawdata'
+            self.Datapath_lineEdit.setText(params.datapath)
         elif params.GUImode == 2:
             self.Sequence_comboBox.clear()
             self.Sequence_comboBox.addItems(['Inversion Recovery (FID)', 'Inversion Recovery (SE)', 'Inversion Recovery (Slice, FID)' \
                                             , 'Inversion Recovery (Slice, SE)', '2D Inversion Recovery (GRE)', '2D Inversion Recovery (SE)' \
                                             , '2D Inversion Recovery (Slice, GRE)', '2D Inversion Recovery (Slice, SE)'])
             self.Sequence_comboBox.setCurrentIndex(0)
-            self.Datapath_lineEdit.setText('rawdata/T1_rawdata')
-            params.datapath = self.Datapath_lineEdit.text()
+            if params.agriMRI_mode == 1: params.datapath = 'T1_rawdata'
+            else: params.datapath = 'rawdata/T1_rawdata'
+            self.Datapath_lineEdit.setText(params.datapath)
         elif params.GUImode == 3:
             self.Sequence_comboBox.clear()
             self.Sequence_comboBox.addItems(['Spin Echo', 'Saturation Inversion Recovery (FID)', 'Spin Echo (Slice)' \
                                             , 'Saturation Inversion Recovery (Slice, FID)', '2D Spin Echo', '2D Saturation Inversion Recovery (GRE)' \
                                             , '2D Spin Echo (Slice)', '2D Saturation Inversion Recovery (Slice, GRE)'])
             self.Sequence_comboBox.setCurrentIndex(0)
-            self.Datapath_lineEdit.setText('rawdata/T2_rawdata')
-            params.datapath = self.Datapath_lineEdit.text()
+            if params.agriMRI_mode == 1: params.datapath = 'T2_rawdata'
+            else: params.datapath = 'rawdata/T2_rawdata'
+            self.Datapath_lineEdit.setText(params.datapath)
         elif params.GUImode == 4:
             self.Sequence_comboBox.clear()
             self.Sequence_comboBox.addItems(['Gradient Echo (On Axis)', 'Spin Echo (On Axis)', 'Gradient Echo (On Angle)' \
                                             , 'Spin Echo (On Angle)', 'Gradient Echo (Slice, On Axis)', 'Spin Echo (Slice, On Axis)' \
                                             , 'Gradient Echo (Slice, On Angle)', 'Spin Echo (Slice, On Angle)'])
             self.Sequence_comboBox.setCurrentIndex(0)
-            self.Datapath_lineEdit.setText('rawdata/Projection_rawdata')
-            params.datapath = self.Datapath_lineEdit.text()
+            if params.agriMRI_mode == 1: params.datapath = 'Projection_rawdata'
+            else: params.datapath = 'rawdata/Projection_rawdata'
+            self.Datapath_lineEdit.setText(params.datapath)
         elif params.GUImode == 5:
             self.Sequence_comboBox.clear()
             self.Sequence_comboBox.addItems(['2D Gradient Echo', '2D Inversion Recovery (GRE)', '2D Spin Echo' \
@@ -315,12 +339,13 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                                             , '2D Inversion Recovery (Slice, GRE)', '2D Spin Echo (Slice)', '2D Inversion Recovery (Slice, SE)' \
                                             , '2D Turbo Spin Echo (Slice, 4 Echos)', '3D FFT Spin Echo (Slab)'])
             self.Sequence_comboBox.setCurrentIndex(0)
-            self.Datapath_lineEdit.setText('rawdata/Image_Stitching_rawdata')
-            params.datapath = self.Datapath_lineEdit.text()
+            if params.agriMRI_mode == 1: params.datapath = 'Image_Stitching_rawdata'
+            else: params.datapath = 'rawdata/Image_Stitching_rawdata'
+            self.Datapath_lineEdit.setText(params.datapath)
 
     def set_sequence(self, idx):
         params.sequence = idx
-        if params.sequence != -1: print('Sequence:\t', params.sequence)
+        if params.sequence != -1: print('Sequence: ' + str(params.sequence))
 
         params.saveFileParameter()
 
@@ -328,7 +353,21 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
         self.Acquire_pushButton.setEnabled(False)
         if params.autodataprocess == 1: self.Data_Process_pushButton.setEnabled(False)
         self.repaint()
-
+        
+        if params.agriMRI_mode == 1:
+            self.datapath_temp = ''
+            self.datapath_temp = params.datapath
+            self.agriMRI_folder_structure_temp = ''
+            self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+            
+            if params.agriMRI_folder_structure != 'rawdata/': params.save_AgriMRI_Metadata_file_json()
+            else: print('\033[1m' + 'No experiment ID set!! Save data to rawdata folder.' + '\033[0m')
+            
+            params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_rawdata'
+            if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+            params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/'
+            params.datapath = params.agriMRI_folder_structure + params.datapath
+                        
         if params.GUImode == 2:
             if params.sequence == 0:
                 proc.T1measurement_IR_FID()
@@ -389,7 +428,7 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                         proc.image_stitching_2D_SE_slice(motor=self.motor)
                     if params.sequence == 10:
                         proc.image_stitching_3D_slab(motor=self.motor)
-                    self.motor_reader.blockSignals(False)                
+                    self.motor_reader.blockSignals(False)
                 else:
                     print('Motor Control: Motor not available, maybe it is still homing?')
             else:
@@ -415,7 +454,7 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                     proc.image_stitching_2D_SE_slice()
                 if params.sequence == 10:
                     proc.image_stitching_3D_slab()
-            
+
         elif params.GUImode == 1:
             if params.autorecenter == 1:
                 self.frequencyoffsettemp = 0
@@ -435,7 +474,7 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                     proc.spectrum_analytics()
                     params.frequency = params.centerfrequency
                     params.saveFileParameter()
-                    print('Autorecenter to: ', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     params.frequencyoffset = self.frequencyoffsettemp
                     if self.dialog_config != None:
                         self.dialog_config.load_params()
@@ -444,11 +483,11 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                     seq.sequence_upload()
                 elif params.sequence == 17 or params.sequence == 19 or params.sequence == 21 \
                         or params.sequence == 24 or params.sequence == 26 or params.sequence == 29 \
@@ -464,7 +503,7 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                     proc.spectrum_analytics()
                     params.frequency = params.centerfrequency
                     params.saveFileParameter()
-                    print('Autorecenter to: ', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     params.frequencyoffset = self.frequencyoffsettemp
                     if self.dialog_config != None:
                         self.dialog_config.load_params()
@@ -473,11 +512,11 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                     seq.sequence_upload()
                 elif params.sequence == 1 or params.sequence == 3 or params.sequence == 5 \
                         or params.sequence == 6 or params.sequence == 8 or params.sequence == 10 \
@@ -494,7 +533,7 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                     proc.spectrum_analytics()
                     params.frequency = params.centerfrequency
                     params.saveFileParameter()
-                    print('Autorecenter to: ', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     params.frequencyoffset = self.frequencyoffsettemp
                     if self.dialog_config != None:
                         self.dialog_config.load_params()
@@ -503,11 +542,11 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                     seq.sequence_upload()
                 elif params.sequence == 18 or params.sequence == 20 or params.sequence == 22 \
                         or params.sequence == 23 or params.sequence == 25 or params.sequence == 27 \
@@ -524,7 +563,7 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                     proc.spectrum_analytics()
                     params.frequency = params.centerfrequency
                     params.saveFileParameter()
-                    print('Autorecenter to: ', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     params.frequencyoffset = self.frequencyoffsettemp
                     if self.dialog_config != None:
                         self.dialog_config.load_params()
@@ -533,38 +572,37 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                     seq.sequence_upload()
             else:
                 seq.sequence_upload()
         else:
             seq.sequence_upload()
-            
+
         params.saveFileParameter()
         params.saveFileData()
-        
+
         if params.GUImode == 5:
-            self.datapathtemp = ''
-            self.datapathtemp = params.datapath
-            params.datapath = params.datapath + '/Image_Stitching'
-            
+            self.datapath_2_temp = ''
+            self.datapath_2_temp = params.datapath
+            params.datapath + '/Image_Stitching'
+
             if params.headerfileformat == 0:
                 params.save_header_file_txt()
             else:
                 params.save_header_file_json()
-                
-            params.datapath = self.datapathtemp
-            
+
+            params.datapath = self.datapath_2_temp
+
         else:
             if params.headerfileformat == 0:
                 params.save_header_file_txt()
             else:
                 params.save_header_file_json()
-            
 
         if self.dialog_params != None:
             self.SIR_TEtemp = 0
@@ -578,10 +616,13 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
             self.dialog_config.load_params()
             self.dialog_config.repaint()
 
-            
         if self.dialog_motortools != None:
             self.dialog_motortools.load_params()
             self.dialog_motortools.repaint()
+
+        if params.agriMRI_mode == 1:
+            params.datapath = self.datapath_temp
+            params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
 
         if params.autodataprocess == 1: self.dataprocess()
 
@@ -616,15 +657,31 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
         else:
             self.dialog_motortools.hide()
             self.dialog_motortools.show()
+            
+    def agri_window(self):
+        if self.dialog_agri == None:
+            self.dialog_agri = AgriMRIMetadataWindow(self)
+            self.dialog_agri.show()
+        else:
+            self.dialog_agri.hide()
+            self.dialog_agri.show()
 
     def set_Datapath(self):
         params.datapath = self.Datapath_lineEdit.text()
-        print('Datapath:', params.datapath)
+        params.saveFileParameter()
 
     def dataprocess(self):
         self.Data_Process_pushButton.setEnabled(False)
         self.repaint()
         
+        if params.agriMRI_mode == 1:
+            self.datapath_temp = ''
+            self.datapath_temp = params.datapath
+            self.agriMRI_folder_structure_temp = ''
+            self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+            params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_rawdata/'
+            params.datapath = params.agriMRI_folder_structure + params.datapath
+            
         self.dataprocess_header_flag = 0
         
         self.GUImode_temp = 0
@@ -716,13 +773,13 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
         else:
             if os.path.isdir(params.datapath) == True:
                 if os.path.isfile(params.datapath + '/Image_Stitching_Header.json') == True:
-                    with open(params.datapath + '/Image_Stitching_Header.json', 'r') as j:
+                    with open(params.datapath + '/Image_Stitching_Header.json', 'r', encoding='utf-8') as j:
                         jsonparams = json.loads(j.read())
                     self.dataprocess_header_flag = 1
                 else: print('No .json header file!!')
             elif os.path.isdir(params.datapath) == False:
                 if os.path.isfile(params.datapath + '_Header.json') == True:
-                    with open(params.datapath + '_Header.json', 'r') as j:
+                    with open(params.datapath + '_Header.json', 'r', encoding='utf-8') as j:
                         jsonparams = json.loads(j.read())
                     self.dataprocess_header_flag = 1
                 else: print('No .json header file!!')
@@ -776,7 +833,12 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
                     if params.single_plot == 1:
                         if self.dialog_plot != None:
                             self.dialog_plot.hide()
+                            if self.dialog_plot.IMag_canvas != None: self.dialog_plot.IMag_canvas.hide()
+                            if self.dialog_plot.IPha_canvas != None: self.dialog_plot.IPha_canvas.hide()
+                            if self.dialog_plot.kMag_canvas != None: self.dialog_plot.kMag_canvas.hide()
+                            if self.dialog_plot.kPha_canvas != None: self.dialog_plot.kPha_canvas.hide()
                             if self.dialog_plot.all_canvas != None: self.dialog_plot.all_canvas.hide()
+                            if self.dialog_plot.hist_canvas != None: self.dialog_plot.hist_canvas.hide()
                             self.dialog_plot = PlotWindow(self)
                             self.dialog_plot.show()
                         else:
@@ -1052,6 +1114,10 @@ class MainWindow(Main_Window_Base, Main_Window_Form):
             params.radialosfactor = self.radialosfactor_temp
             params.autofreqoffset = self.autofreqoffset_temp
             params.sliceoffset = self.sliceoffset_temp
+            
+        if params.agriMRI_mode == 1:
+            params.datapath = self.datapath_temp
+            params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
         
         self.Data_Process_pushButton.setEnabled(True)
         self.repaint()
@@ -1150,6 +1216,11 @@ class ParametersWindow(Para_Window_Form, Para_Window_Base):
         self.TE_Stop_doubleSpinBox.valueChanged.connect(self.update_params)
         self.TE_Steps_spinBox.setKeyboardTracking(False)
         self.TE_Steps_spinBox.valueChanged.connect(self.update_params)
+        
+        self.TI_Stepping_Linear_radioButton.toggled.connect(self.update_TI_stepping_linear)
+        self.TI_Stepping_Log_radioButton.toggled.connect(self.update_TI_stepping_log)
+        self.TE_Stepping_Linear_radioButton.toggled.connect(self.update_TE_stepping_linear)
+        self.TE_Stepping_Log_radioButton.toggled.connect(self.update_TE_stepping_log)
 
         self.Projection_X_radioButton.toggled.connect(self.update_params)
         self.Projection_Y_radioButton.toggled.connect(self.update_params)
@@ -1256,7 +1327,7 @@ class ParametersWindow(Para_Window_Form, Para_Window_Base):
         self.Motor_Start_Position_doubleSpinBox.setMaximum(params.motor_axis_limit_positive)
         self.Motor_End_Position_doubleSpinBox.setMinimum(params.motor_axis_limit_negative)
         self.Motor_End_Position_doubleSpinBox.setMaximum(params.motor_axis_limit_positive)
-
+        
     def update_motor_start_position(self):
         params.motor_start_position = self.Motor_Start_Position_doubleSpinBox.value()
 
@@ -1408,6 +1479,20 @@ class ParametersWindow(Para_Window_Form, Para_Window_Base):
         self.TE_Start_doubleSpinBox.setValue(params.TEstart)
         self.TE_Stop_doubleSpinBox.setValue(params.TEstop)
         self.TE_Steps_spinBox.setValue(params.TEsteps)
+        
+        if params.TIstepping == 1:
+            self.TI_Stepping_Log_radioButton.setChecked(True)
+            self.TI_Stepping_Linear_radioButton.setChecked(False)
+        else:
+            self.TI_Stepping_Log_radioButton.setChecked(False)
+            self.TI_Stepping_Linear_radioButton.setChecked(True)
+            
+        if params.TEstepping == 1:
+            self.TE_Stepping_Log_radioButton.setChecked(True)
+            self.TE_Stepping_Linear_radioButton.setChecked(False)
+        else:
+            self.TE_Stepping_Log_radioButton.setChecked(False)
+            self.TE_Stepping_Linear_radioButton.setChecked(True)
 
         if params.projaxis[0] == 1: self.Projection_X_radioButton.setChecked(True)
         if params.projaxis[1] == 1: self.Projection_Y_radioButton.setChecked(True)
@@ -1505,13 +1590,39 @@ class ParametersWindow(Para_Window_Form, Para_Window_Base):
             self.Flipangle_Amplitude_spinBox.setValue(params.flipangleamplitude)
 
         params.flippulselength = int(params.RFpulselength / 90 * params.flipangletime)
-        if params.GSamplitude == 0:
-            params.GSposttime = 0
-        else:
-            params.GSposttime = int((200 * params.GSamplitude + 4 * params.flippulselength * params.GSamplitude) / 2 - 200 * params.GSamplitude / 2) / (params.GSamplitude / 2)
+        
+        if params.GSamplitude == 0: params.GSposttime = 0
+        else: params.GSposttime = int((200 * params.GSamplitude + 4 * params.flippulselength * params.GSamplitude) / 2 - 200 * params.GSamplitude / 2) / (params.GSamplitude / 2)
 
         if params.autograd == 1:
             self.Deltaf = 1 / (params.flippulselength) * 1000000
+            
+            if params.imageorientation == 0:
+                self.Gxsens = params.gradsens[0]
+                self.Gysens = params.gradsens[1]
+                self.Gzsens = params.gradsens[2]
+            elif params.imageorientation == 1:
+                self.Gxsens = params.gradsens[1]
+                self.Gysens = params.gradsens[2]
+                self.Gzsens = params.gradsens[0]
+            elif params.imageorientation == 2:
+                self.Gxsens = params.gradsens[2]
+                self.Gysens = params.gradsens[0]
+                self.Gzsens = params.gradsens[1]
+            elif params.imageorientation == 3:
+                self.Gxsens = params.gradsens[1]
+                self.Gysens = params.gradsens[0]
+                self.Gzsens = params.gradsens[2]
+            elif params.imageorientation == 4:
+                self.Gxsens = params.gradsens[2]
+                self.Gysens = params.gradsens[1]
+                self.Gzsens = params.gradsens[0]
+            elif params.imageorientation == 5:
+                self.Gxsens = params.gradsens[0]
+                self.Gysens = params.gradsens[2]
+                self.Gzsens = params.gradsens[1]
+                
+            self.GPEtime = params.GROpretime + 200
 
             self.Gz = (2 * np.pi * self.Deltaf) / (2 * np.pi * 42.57 * (params.slicethickness))
             params.GSamplitude = int(self.Gz / self.Gzsens * 1000)
@@ -1533,6 +1644,7 @@ class ParametersWindow(Para_Window_Form, Para_Window_Base):
 
             self.Gz3D = (2 * np.pi / params.slicethickness) / (2 * np.pi * 42.57 * (self.GPEtime / 1000000))
             params.GSPEstep = int(self.Gz3D / self.Gzsens * 1000)
+            
             if round(params.GSPEstep * params.SPEsteps/2) > 8500: self.GSPEstep_spinBox.setStyleSheet('color: red')
             else:
                 if params.GUItheme == 0: self.GSPEstep_spinBox.setStyleSheet('color: #31363B')
@@ -1565,6 +1677,42 @@ class ParametersWindow(Para_Window_Form, Para_Window_Base):
         params.flippulseamplitude = int(params.RFpulseamplitude / 90 * params.flipangleamplitude)
 
         params.saveFileParameter()
+        
+    def update_TI_stepping_linear(self):
+        if self.TI_Stepping_Linear_radioButton.isChecked():
+            params.TIstepping = 0
+            self.TI_Stepping_Log_radioButton.setChecked(False)
+        elif self.TI_Stepping_Linear_radioButton.isChecked() == False and self.TI_Stepping_Log_radioButton.isChecked() == False:
+            params.TIstepping = 0
+            self.TI_Stepping_Linear_radioButton.setChecked(True)
+        params.saveFileParameter()
+
+    def update_TI_stepping_log(self):
+        if self.TI_Stepping_Log_radioButton.isChecked():
+            params.TIstepping = 1
+            self.TI_Stepping_Linear_radioButton.setChecked(False)
+        elif self.TI_Stepping_Linear_radioButton.isChecked() == False and self.TI_Stepping_Log_radioButton.isChecked() == False:
+            params.TIstepping = 0
+            self.TI_Stepping_Linear_radioButton.setChecked(True)
+        params.saveFileParameter()
+        
+    def update_TE_stepping_linear(self):
+        if self.TE_Stepping_Linear_radioButton.isChecked():
+            params.TEstepping = 0
+            self.TE_Stepping_Log_radioButton.setChecked(False)
+        elif self.TE_Stepping_Linear_radioButton.isChecked() == False and self.TE_Stepping_Log_radioButton.isChecked() == False:
+            params.TEstepping = 0
+            self.TE_Stepping_Linear_radioButton.setChecked(True)
+        params.saveFileParameter()
+
+    def update_TE_stepping_log(self):
+        if self.TE_Stepping_Log_radioButton.isChecked():
+            params.TEstepping = 1
+            self.TE_Stepping_Linear_radioButton.setChecked(False)
+        elif self.TE_Stepping_Linear_radioButton.isChecked() == False and self.TE_Stepping_Log_radioButton.isChecked() == False:
+            params.TEstepping = 0
+            self.TE_Stepping_Linear_radioButton.setChecked(True)
+        params.saveFileParameter()
 
     def auto_freqoffset(self):
 
@@ -1594,10 +1742,8 @@ class ParametersWindow(Para_Window_Form, Para_Window_Base):
     def update_params(self):
         params.flippulselength = int(params.RFpulselength / 90 * params.flipangletime)
 
-        if params.GSamplitude == 0:
-            params.GSposttime = 0
-        else:
-            params.GSposttime = int((200 * params.GSamplitude + 4 * params.flippulselength * params.GSamplitude) / 2 - 200 * params.GSamplitude / 2) / (params.GSamplitude / 2)
+        if params.GSamplitude == 0: params.GSposttime = 0
+        else: params.GSposttime = int((200 * params.GSamplitude + 4 * params.flippulselength * params.GSamplitude) / 2 - 200 * params.GSamplitude / 2) / (params.GSamplitude / 2)
 
         params.TE = self.TE_doubleSpinBox.value()
         params.TI = self.TI_doubleSpinBox.value()
@@ -1622,18 +1768,12 @@ class ParametersWindow(Para_Window_Form, Para_Window_Base):
         params.TEstop = self.TE_Stop_doubleSpinBox.value()
         params.TEsteps = self.TE_Steps_spinBox.value()
 
-        if self.Projection_X_radioButton.isChecked():
-            params.projaxis[0] = 1
-        else:
-            params.projaxis[0] = 0
-        if self.Projection_Y_radioButton.isChecked():
-            params.projaxis[1] = 1
-        else:
-            params.projaxis[1] = 0
-        if self.Projection_Z_radioButton.isChecked():
-            params.projaxis[2] = 1
-        else:
-            params.projaxis[2] = 0
+        if self.Projection_X_radioButton.isChecked(): params.projaxis[0] = 1
+        else: params.projaxis[0] = 0
+        if self.Projection_Y_radioButton.isChecked(): params.projaxis[1] = 1
+        else: params.projaxis[1] = 0
+        if self.Projection_Z_radioButton.isChecked(): params.projaxis[2] = 1
+        else: params.projaxis[2] = 0
 
         params.projectionangle = self.Projection_Angle_spinBox.value()
         params.projectionangleradmod100 = int((math.radians(params.projectionangle) % (2 * np.pi)) * 100)
@@ -1888,7 +2028,7 @@ class ConfigWindow(Config_Window_Form, Config_Window_Base):
 
         self.ui = loadUi('ui/config.ui')
         self.setWindowTitle('Config')
-        self.setGeometry(420, 40, 760, 820)
+        self.setGeometry(420, 40, 760, 940)
 
         # self.label_3.setToolTip('<img src='tooltip/test.png'>')
         self.Frequency_doubleSpinBox.setKeyboardTracking(False)
@@ -1981,7 +2121,10 @@ class ConfigWindow(Config_Window_Form, Config_Window_Base):
         self.Single_Plot_radioButton.toggled.connect(self.update_params)
         self.Measurement_Time_Dialog_radioButton.toggled.connect(self.update_params)
         self.Image_Grid_radioButton.toggled.connect(self.update_params)
+        
         self.Projection3D_radioButton.toggled.connect(self.update_params)
+        self.Projection3D_Quality_Low_radioButton.toggled.connect(self.update_proj3D_quality_low)
+        self.Projection3D_Quality_High_radioButton.toggled.connect(self.update_proj3D_quality_high)
         
         self.Image_Colormap_comboBox.clear()
         self.Image_Colormap_comboBox.addItems(['viridis', 'jet', 'gray', 'bone', 'inferno', 'plasma'])
@@ -1992,6 +2135,23 @@ class ConfigWindow(Config_Window_Form, Config_Window_Base):
         elif params.imagecolormap == 'inferno': self.Image_Colormap_comboBox.setCurrentIndex(4)
         elif params.imagecolormap == 'plasma': self.Image_Colormap_comboBox.setCurrentIndex(5)
         self.Image_Colormap_comboBox.currentIndexChanged.connect(self.update_params)
+        
+        self.PB_Marker_IsoCenter_Distance_doubleSpinBox.setKeyboardTracking(False)
+        self.PB_Marker_IsoCenter_Distance_doubleSpinBox.valueChanged.connect(self.update_params)
+        self.PB_IsoCenter_Position_doubleSpinBox.setKeyboardTracking(False)
+        self.PB_IsoCenter_Position_doubleSpinBox.valueChanged.connect(self.update_params)
+        
+        self.PB_Marker_Cal_Apply_pushButton.clicked.connect(lambda: self.Set_PB_Marker_IsoCenter_Distance())
+        
+        self.AgriMRI_Mode_radioButton.toggled.connect(self.update_params)
+        
+        self.label_16.setStyleSheet('font-size: 12px')
+        self.label_17.setStyleSheet('font-size: 12px')
+        self.label_18.setStyleSheet('font-size: 12px')
+        self.label_32.setStyleSheet('font-size: 12px')
+        
+        self.label_25.setStyleSheet('font-size: 14px')
+        self.label_47.setStyleSheet('font-size: 14px')
 
     def frequency_center(self):
         params.frequency = params.centerfrequency
@@ -2059,7 +2219,14 @@ class ConfigWindow(Config_Window_Form, Config_Window_Base):
         if params.single_plot == 1: self.Single_Plot_radioButton.setChecked(True)
         if params.measurement_time_dialog == 1: self.Measurement_Time_Dialog_radioButton.setChecked(True)
         if params.image_grid == 1: self.Image_Grid_radioButton.setChecked(True)
+        
         if params.projection3D == 1: self.Projection3D_radioButton.setChecked(True)
+        if params.projection3D_quality == 1:
+            self.Projection3D_Quality_High_radioButton.setChecked(True)
+            self.Projection3D_Quality_Low_radioButton.setChecked(False)
+        else:
+            self.Projection3D_Quality_High_radioButton.setChecked(False)
+            self.Projection3D_Quality_Low_radioButton.setChecked(True)
         
         if params.imagecolormap == 'viridis': self.Image_Colormap_comboBox.setCurrentIndex(0)
         elif params.imagecolormap == 'jet': self.Image_Colormap_comboBox.setCurrentIndex(1)
@@ -2067,6 +2234,15 @@ class ConfigWindow(Config_Window_Form, Config_Window_Base):
         elif params.imagecolormap == 'bone': self.Image_Colormap_comboBox.setCurrentIndex(3)
         elif params.imagecolormap == 'inferno': self.Image_Colormap_comboBox.setCurrentIndex(4)
         elif params.imagecolormap == 'plasma': self.Image_Colormap_comboBox.setCurrentIndex(5)
+
+        self.PB_Marker_IsoCenter_Distance_doubleSpinBox.setValue(params.PB_marker_isocenter_distance)
+        self.PB_Marker_IsoCenter_Distance_doubleSpinBox.setMaximum(params.motor_axis_limit_positive)
+        self.PB_Marker_IsoCenter_Distance_doubleSpinBox.setMinimum(params.motor_axis_limit_negative)
+        self.PB_IsoCenter_Position_doubleSpinBox.setValue(params.PB_isocenter_position)
+        self.PB_IsoCenter_Position_doubleSpinBox.setMaximum(params.motor_axis_limit_positive)
+        self.PB_IsoCenter_Position_doubleSpinBox.setMinimum(params.motor_axis_limit_negative)
+        
+        if params.agriMRI_mode == 1: self.AgriMRI_Mode_radioButton.setChecked(True)
 
     def update_params(self):
         params.frequency = self.Frequency_doubleSpinBox.value()
@@ -2160,6 +2336,12 @@ class ConfigWindow(Config_Window_Form, Config_Window_Base):
         elif self.Image_Colormap_comboBox.currentIndex() == 3: params.imagecolormap = 'bone'
         elif self.Image_Colormap_comboBox.currentIndex() == 4: params.imagecolormap = 'inferno'
         elif self.Image_Colormap_comboBox.currentIndex() == 5: params.imagecolormap = 'plasma'
+        
+        params.PB_marker_isocenter_distance = self.PB_Marker_IsoCenter_Distance_doubleSpinBox.value()
+        params.PB_isocenter_position = self.PB_IsoCenter_Position_doubleSpinBox.value()
+        
+        if self.AgriMRI_Mode_radioButton.isChecked(): params.agriMRI_mode = 1
+        else: params.agriMRI_mode = 0
         
         params.saveFileParameter()
 
@@ -2260,6 +2442,12 @@ class ConfigWindow(Config_Window_Form, Config_Window_Base):
         self.Gradient_Scaling_Z_doubleSpinBox.setValue(params.gradsens[2])
         print('Tool reference scaling Z applied!')
         
+    def Set_PB_Marker_IsoCenter_Distance(self):
+        params.PB_marker_isocenter_distance = params.Ref_PB_marker_isocenter_distance
+        params.saveFileParameter()
+        self.PB_Marker_IsoCenter_Distance_doubleSpinBox.setValue(params.PB_marker_isocenter_distance)
+        print('Tool reference marker-IsoCenter distance applied!')
+        
     def update_average_abs(self):
         if self.Average_Abs_radioButton.isChecked():
             params.average_complex = 0
@@ -2282,14 +2470,449 @@ class ConfigWindow(Config_Window_Form, Config_Window_Base):
         if self.Undersampling_Methode_1_radioButton.isChecked():
             params.usmethode = 1
             self.Undersampling_Methode_2_radioButton.setChecked(False)
-            self.update_params()
+        elif self.Undersampling_Methode_1_radioButton.isChecked() == False and self.Undersampling_Methode_2_radioButton.isChecked() == False:
+            params.usmethode = 1
+            self.Undersampling_Methode_1_radioButton.setChecked(True)
+        params.saveFileParameter()
 
     def update_undersampling_methode2(self):
         if self.Undersampling_Methode_2_radioButton.isChecked():
             params.usmethode = 2
             self.Undersampling_Methode_1_radioButton.setChecked(False)
-            self.update_params()
+        elif self.Undersampling_Methode_1_radioButton.isChecked() == False and self.Undersampling_Methode_2_radioButton.isChecked() == False:
+            params.usmethode = 1
+            self.Undersampling_Methode_1_radioButton.setChecked(True)
+        params.saveFileParameter()
+            
+    def update_proj3D_quality_low(self):
+        if self.Projection3D_Quality_Low_radioButton.isChecked():
+            params.projection3D_quality = 0
+            self.Projection3D_Quality_High_radioButton.setChecked(False)
+        elif self.Projection3D_Quality_Low_radioButton.isChecked() == False and self.Projection3D_Quality_High_radioButton.isChecked() == False:
+            params.projection3D_quality = 0
+            self.Projection3D_Quality_Low_radioButton.setChecked(True)
+        params.saveFileParameter()
 
+    def update_proj3D_quality_high(self):
+        if self.Projection3D_Quality_High_radioButton.isChecked():
+            params.projection3D_quality = 1
+            self.Projection3D_Quality_Low_radioButton.setChecked(False)
+        elif self.Projection3D_Quality_Low_radioButton.isChecked() == False and self.Projection3D_Quality_High_radioButton.isChecked() == False:
+            params.projection3D_quality = 0
+            self.Projection3D_Quality_Low_radioButton.setChecked(True)
+        params.saveFileParameter()
+        
+class AgriMRIMetadataWindow(AgriMRI_Window_Form, AgriMRI_Window_Base):
+    connected = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(AgriMRIMetadataWindow, self).__init__(parent)
+        self.setupUi(self)
+                
+        self.load_params()
+
+        self.ui = loadUi('ui/agriMRI.ui')
+        self.setWindowTitle('AgriMRI Metadata')
+        self.setGeometry(420, 40, 750, 1000)
+        
+        self.Experiment_ID_lineEdit.editingFinished.connect(lambda: self.set_Experiment_ID())
+        self.Plant_ID_lineEdit.editingFinished.connect(lambda: self.set_Plant_ID())
+        self.Plant_Part_ID_lineEdit.editingFinished.connect(lambda: self.set_Plant_Part_ID())
+        
+        self.Plant_Species_comboBox.clear()
+        self.Plant_Species_comboBox.addItems(params.plant_species_list)
+        self.Plant_Species_comboBox.setCurrentIndex(0)
+        self.Plant_Species_comboBox.currentIndexChanged.connect(lambda: self.set_Species())
+        
+        self.Plant_Part_Name_lineEdit.editingFinished.connect(lambda: self.update_params())
+        self.Plant_Date_Of_Sowing_dateEdit.userDateChanged.connect(lambda: self.set_Date_Of_Sowing())
+        self.Plant_Measurement_Date_dateEdit.userDateChanged.connect(lambda: self.set_Measurement_Date())
+        self.Plant_Measurement_Date_Today_pushButton.clicked.connect(lambda: self.set_Measurement_Date_Today())
+        self.Plant_Measurement_DAS_spinBox.setKeyboardTracking(False)
+        self.Plant_Measurement_DAS_spinBox.valueChanged.connect(lambda: self.set_Measurement_DAS())
+        
+        self.Plant_Phenological_Phase_comboBox.clear()
+        self.Plant_Phenological_Phase_comboBox.addItems(params.plant_phenological_phases_list)
+        self.Plant_Phenological_Phase_comboBox.setCurrentIndex(0)
+        self.Plant_Phenological_Phase_comboBox.currentIndexChanged.connect(lambda: self.set_Phenological_Phase())
+        
+        self.Plant_Show_Phase_Images_pushButton.clicked.connect(lambda: self.show_Phase_Images())
+        
+        self.Plant_Environment_Outside_radioButton.toggled.connect(self.update_params)
+        self.Plant_Environment_Inside_radioButton.toggled.connect(self.update_params)
+        
+        self.Plant_Light_Source_Sun_radioButton.toggled.connect(self.update_params)
+        self.Plant_Light_Source_Grow_Light_radioButton.toggled.connect(self.update_params)
+        self.Plant_Light_Source_Artificial_radioButton.toggled.connect(self.update_params)
+        self.Plant_Light_Availability_spinBox.setKeyboardTracking(False)
+        self.Plant_Light_Availability_spinBox.valueChanged.connect(self.update_params)
+        
+        self.Plant_Water_Availability_spinBox.setKeyboardTracking(False)
+        self.Plant_Water_Availability_spinBox.valueChanged.connect(self.update_params)
+        
+        self.Plant_Nutrient_Application_comboBox.clear()
+        self.Plant_Nutrient_Application_comboBox.addItems(['1', '2', '3', '4','5', '6', '7', '8','9', '10'])
+        self.Plant_Nutrient_Application_comboBox.setCurrentIndex(0)
+        self.Plant_Nutrient_Application_comboBox.currentIndexChanged.connect(lambda: self.set_Nutrient_Application())
+        self.Plant_Nutrient_Date_dateEdit.userDateChanged.connect(lambda: self.set_Nutrient_Date())
+        self.Plant_Nutrient_DAS_spinBox.setKeyboardTracking(False)
+        self.Plant_Nutrient_DAS_spinBox.valueChanged.connect(lambda: self.set_Nutrient_DAS())
+        self.Plant_Nitrogen_spinBox.setKeyboardTracking(False)
+        self.Plant_Nitrogen_spinBox.valueChanged.connect(self.update_params)
+        self.Plant_Phosphorus_spinBox.setKeyboardTracking(False)
+        self.Plant_Phosphorus_spinBox.valueChanged.connect(self.update_params)
+        self.Plant_Potassium_spinBox.setKeyboardTracking(False)
+        self.Plant_Potassium_spinBox.valueChanged.connect(self.update_params)
+        
+        self.Plant_Stimulant_Application_comboBox.clear()
+        self.Plant_Stimulant_Application_comboBox.addItems(['1', '2', '3', '4','5', '6', '7', '8','9', '10'])
+        self.Plant_Stimulant_Application_comboBox.setCurrentIndex(0)
+        self.Plant_Stimulant_Application_comboBox.currentIndexChanged.connect(lambda: self.set_Stimulant_Application())
+        self.Plant_Stimulant_Product_Name_lineEdit.editingFinished.connect(lambda: self.update_params())
+        self.Plant_Stimulant_Date_dateEdit.userDateChanged.connect(lambda: self.set_Stimulant_Date())
+        self.Plant_Stimulant_DAS_spinBox.setKeyboardTracking(False)
+        self.Plant_Stimulant_DAS_spinBox.valueChanged.connect(lambda: self.set_Stimulant_DAS())
+        self.Plant_Stimulant_Dose_spinBox.setKeyboardTracking(False)
+        self.Plant_Stimulant_Dose_spinBox.valueChanged.connect(self.update_params)
+        
+        self.Plant_Protection_Application_comboBox.clear()
+        self.Plant_Protection_Application_comboBox.addItems(['1', '2', '3', '4','5', '6', '7', '8','9', '10'])
+        self.Plant_Protection_Application_comboBox.setCurrentIndex(0)
+        self.Plant_Protection_Application_comboBox.currentIndexChanged.connect(lambda: self.set_Protection_Application())
+        self.Plant_Protection_Product_Name_lineEdit.editingFinished.connect(lambda: self.update_params())
+        self.Plant_Protection_Date_dateEdit.userDateChanged.connect(lambda: self.set_Protection_Date())
+        self.Plant_Protection_DAS_spinBox.setKeyboardTracking(False)
+        self.Plant_Protection_DAS_spinBox.valueChanged.connect(lambda: self.set_Protection_DAS())
+        self.Plant_Protection_Dose_spinBox.setKeyboardTracking(False)
+        self.Plant_Protection_Dose_spinBox.valueChanged.connect(self.update_params)
+        
+        self.Experiment_Description_textEdit.textChanged.connect(lambda: self.set_Experiment_Description())
+        self.Plant_Description_textEdit.textChanged.connect(lambda: self.set_Plant_Description())
+    
+    def load_params(self):
+        self.Experiment_ID_lineEdit.blockSignals(True)
+        self.Plant_ID_lineEdit.blockSignals(True)
+        self.Plant_Part_ID_lineEdit.blockSignals(True)
+        self.Plant_Part_Name_lineEdit.blockSignals(True)
+        self.Plant_Species_comboBox.blockSignals(True)
+        self.Plant_Date_Of_Sowing_dateEdit.blockSignals(True)
+        self.Plant_Measurement_Date_dateEdit.blockSignals(True)
+        self.Plant_Measurement_DAS_spinBox.blockSignals(True)
+        self.Plant_Phenological_Phase_comboBox.blockSignals(True)
+        self.Plant_Environment_Outside_radioButton.blockSignals(True)
+        self.Plant_Environment_Inside_radioButton.blockSignals(True)
+        self.Plant_Light_Source_Sun_radioButton.blockSignals(True)
+        self.Plant_Light_Source_Grow_Light_radioButton.blockSignals(True)
+        self.Plant_Light_Source_Artificial_radioButton.blockSignals(True)
+        self.Plant_Light_Availability_spinBox.blockSignals(True)
+        self.Plant_Water_Availability_spinBox.blockSignals(True)
+        self.Plant_Nutrient_Application_comboBox.blockSignals(True)
+        self.Plant_Nutrient_Date_dateEdit.blockSignals(True)
+        self.Plant_Nutrient_DAS_spinBox.blockSignals(True)
+        self.Plant_Nitrogen_spinBox.blockSignals(True)
+        self.Plant_Phosphorus_spinBox.blockSignals(True)
+        self.Plant_Potassium_spinBox.blockSignals(True)
+        self.Plant_Stimulant_Application_comboBox.blockSignals(True)
+        self.Plant_Stimulant_Product_Name_lineEdit.blockSignals(True) 
+        self.Plant_Stimulant_Date_dateEdit.blockSignals(True)
+        self.Plant_Stimulant_DAS_spinBox.blockSignals(True)
+        self.Plant_Stimulant_Dose_spinBox.blockSignals(True)
+        self.Plant_Protection_Application_comboBox.blockSignals(True)
+        self.Plant_Protection_Product_Name_lineEdit.blockSignals(True) 
+        self.Plant_Protection_Date_dateEdit.blockSignals(True)
+        self.Plant_Protection_DAS_spinBox.blockSignals(True)
+        self.Plant_Protection_Dose_spinBox.blockSignals(True)
+        self.Plant_Species_comboBox.setCurrentIndex(params.plant_species_index)
+        self.Plant_Scientific_Name_lineEdit.setText(params.plant_scientific_name)
+        self.Plant_Taxonomy_lineEdit.setText(params.plant_taxonomy)
+        
+        self.Experiment_ID_lineEdit.setText(params.experiment_ID)
+        self.Plant_ID_lineEdit.setText(params.plant_ID)
+        self.Plant_Part_ID_lineEdit.setText(params.plant_part_ID)
+        self.Plant_Part_Name_lineEdit.setText(params.plant_part_name)
+        
+        self.Plant_Date_Of_Sowing_dateEdit.setDate(params.plant_date_of_sowing)
+        self.Plant_Measurement_Date_dateEdit.setDate(params.plant_measurement_date)
+        self.Plant_Measurement_DAS_spinBox.setValue(params.plant_measurement_das)
+
+        self.Plant_Phenological_Phase_comboBox.clear()
+        self.Plant_Phenological_Phase_comboBox.addItems(params.plant_phenological_phases_list)
+        self.Plant_Phenological_Phase_comboBox.setCurrentIndex(params.plant_phenological_phase_index)
+        if params.plant_BBCH_scale == 'General': self.Plant_Phenological_Phase_comboBox.setStyleSheet('color: orange;')
+        else: 
+            if params.GUItheme == 0: self.Plant_Phenological_Phase_comboBox.setStyleSheet('color: #31363B')
+            else: self.Plant_Phenological_Phase_comboBox.setStyleSheet('color: #eff0f1')
+        
+        if params.plant_environment_outside == 1: self.Plant_Environment_Outside_radioButton.setChecked(True)
+        if params.plant_environment_inside == 1: self.Plant_Environment_Inside_radioButton.setChecked(True)
+        
+        if params.plant_light_source_sun == 1: self.Plant_Light_Source_Sun_radioButton.setChecked(True)
+        if params.plant_light_source_grow_light == 1: self.Plant_Light_Source_Grow_Light_radioButton.setChecked(True)
+        if params.plant_light_source_artificial == 1: self.Plant_Light_Source_Artificial_radioButton.setChecked(True)
+        self.Plant_Light_Availability_spinBox.setValue(params.plant_light_availability)
+        
+        self.Plant_Water_Availability_spinBox.setValue(params.plant_water_availability)
+        
+        self.Plant_Nutrient_Application_comboBox.setCurrentIndex(params.plant_nutrient_application_index)
+        try: self.Plant_Nutrient_Date_dateEdit.setDate(params.plant_nutrient_date[params.plant_nutrient_application_index])
+        except: self.Plant_Nutrient_Date_dateEdit.setDate(datetime.datetime.strptime('2025-01-01','%Y-%m-%d'))
+        self.Plant_Nutrient_DAS_spinBox.setValue(params.plant_nutrient_das[params.plant_nutrient_application_index])
+        self.Plant_Nitrogen_spinBox.setValue(params.plant_nitrogen[params.plant_nutrient_application_index])
+        self.Plant_Phosphorus_spinBox.setValue(params.plant_phosphorus[params.plant_nutrient_application_index])
+        self.Plant_Potassium_spinBox.setValue(params.plant_potassium[params.plant_nutrient_application_index])
+        
+        self.Plant_Stimulant_Application_comboBox.setCurrentIndex(params.plant_stimulant_application_index)
+        self.Plant_Stimulant_Product_Name_lineEdit.setText(params.plant_stimulant_product_name[params.plant_stimulant_application_index])
+        try: self.Plant_Stimulant_Date_dateEdit.setDate(params.plant_stimulant_date[params.plant_stimulant_application_index])
+        except: self.Plant_Stimulant_Date_dateEdit.setDate(datetime.datetime.strptime('2025-01-01','%Y-%m-%d'))
+        self.Plant_Stimulant_DAS_spinBox.setValue(params.plant_stimulant_das[params.plant_stimulant_application_index])
+        self.Plant_Stimulant_Dose_spinBox.setValue(params.plant_stimulant_dose[params.plant_stimulant_application_index])
+        
+        self.Plant_Protection_Application_comboBox.setCurrentIndex(params.plant_protection_application_index)
+        self.Plant_Protection_Product_Name_lineEdit.setText(str(params.plant_protection_product_name[params.plant_protection_application_index]))
+        try: self.Plant_Protection_Date_dateEdit.setDate(params.plant_protection_date[params.plant_protection_application_index])
+        except: self.Plant_Protection_Date_dateEdit.setDate(datetime.datetime.strptime('2025-01-01','%Y-%m-%d'))
+        self.Plant_Protection_DAS_spinBox.setValue(params.plant_protection_das[params.plant_protection_application_index])
+        self.Plant_Protection_Dose_spinBox.setValue(params.plant_protection_dose[params.plant_protection_application_index])
+        
+        self.Experiment_Description_textEdit.setText(params.experiment_description)
+        self.Plant_Description_textEdit.setText(params.plant_description)
+        
+        self.Experiment_ID_lineEdit.blockSignals(False)
+        self.Plant_ID_lineEdit.blockSignals(False)
+        self.Plant_Part_ID_lineEdit.blockSignals(False)
+        self.Plant_Part_Name_lineEdit.blockSignals(False)
+        self.Plant_Species_comboBox.blockSignals(False)
+        self.Plant_Date_Of_Sowing_dateEdit.blockSignals(False)
+        self.Plant_Measurement_Date_dateEdit.blockSignals(False)
+        self.Plant_Measurement_DAS_spinBox.blockSignals(False)
+        self.Plant_Phenological_Phase_comboBox.blockSignals(False)
+        self.Plant_Environment_Outside_radioButton.blockSignals(False)
+        self.Plant_Environment_Inside_radioButton.blockSignals(False)
+        self.Plant_Light_Source_Sun_radioButton.blockSignals(False)
+        self.Plant_Light_Source_Grow_Light_radioButton.blockSignals(False)
+        self.Plant_Light_Source_Artificial_radioButton.blockSignals(False)
+        self.Plant_Light_Availability_spinBox.blockSignals(False)
+        self.Plant_Water_Availability_spinBox.blockSignals(False)
+        self.Plant_Nutrient_Application_comboBox.blockSignals(False)
+        self.Plant_Nutrient_Date_dateEdit.blockSignals(False)
+        self.Plant_Nutrient_DAS_spinBox.blockSignals(False)
+        self.Plant_Nitrogen_spinBox.blockSignals(False)
+        self.Plant_Phosphorus_spinBox.blockSignals(False)
+        self.Plant_Potassium_spinBox.blockSignals(False)
+        self.Plant_Stimulant_Application_comboBox.blockSignals(False)
+        self.Plant_Stimulant_Product_Name_lineEdit.blockSignals(False) 
+        self.Plant_Stimulant_Date_dateEdit.blockSignals(False)
+        self.Plant_Stimulant_DAS_spinBox.blockSignals(False)
+        self.Plant_Stimulant_Dose_spinBox.blockSignals(False)
+        self.Plant_Protection_Application_comboBox.blockSignals(False)
+        self.Plant_Protection_Product_Name_lineEdit.blockSignals(False) 
+        self.Plant_Protection_Date_dateEdit.blockSignals(False)
+        self.Plant_Protection_DAS_spinBox.blockSignals(False)
+        self.Plant_Protection_Dose_spinBox.blockSignals(False)
+        
+    def update_params(self):
+        params.plant_part_name = self.Plant_Part_Name_lineEdit.text()
+        
+        if self.Plant_Environment_Outside_radioButton.isChecked(): params.plant_environment_outside = 1
+        else: params.plant_environment_outside = 0
+        if self.Plant_Environment_Inside_radioButton.isChecked(): params.plant_environment_inside = 1
+        else: params.plant_environment_inside = 0
+        
+        if self.Plant_Light_Source_Sun_radioButton.isChecked(): params.plant_light_source_sun = 1
+        else: params.plant_light_source_sun = 0
+        if self.Plant_Light_Source_Grow_Light_radioButton.isChecked(): params.plant_light_source_grow_light = 1
+        else: params.plant_light_source_grow_light = 0
+        if self.Plant_Light_Source_Artificial_radioButton.isChecked(): params.plant_light_source_artificial = 1
+        else: params.plant_light_source_artificial = 0
+        params.plant_light_availability = self.Plant_Light_Availability_spinBox.value()
+        
+        params.plant_water_availability = self.Plant_Water_Availability_spinBox.value()
+        
+        params.plant_nitrogen[params.plant_nutrient_application_index] = self.Plant_Nitrogen_spinBox.value()
+        params.plant_phosphorus[params.plant_nutrient_application_index] = self.Plant_Phosphorus_spinBox.value()
+        params.plant_potassium[params.plant_nutrient_application_index] = self.Plant_Potassium_spinBox.value()
+        
+        params.plant_stimulant_product_name[params.plant_stimulant_application_index] = self.Plant_Stimulant_Product_Name_lineEdit.text()
+        params.plant_stimulant_dose[params.plant_stimulant_application_index] = self.Plant_Stimulant_Dose_spinBox.value()
+        
+        params.plant_protection_product_name[params.plant_protection_application_index] = self.Plant_Protection_Product_Name_lineEdit.text()
+        params.plant_protection_dose[params.plant_protection_application_index] = self.Plant_Protection_Dose_spinBox.value()
+        
+        params.saveFileAgriMRIParameter()
+        
+    def set_Experiment_ID(self):
+        params.experiment_ID = self.Experiment_ID_lineEdit.text()
+        proc.set_agriMRI_folder_structure()
+        
+        if os.path.isfile(params.agriMRI_folder_structure + 'AgriMRI_Metadata.json') == True:
+            params.load_AgriMRI_Metadata_file_json()
+            params.laod_phenological_phases_library()
+            self.load_params()
+        else:
+            print('No .json AgriMRI metadata file!!')
+            params.AgriMRI_var_reset()
+            self.load_params()
+        
+        params.saveFileAgriMRIParameter()
+        
+    def set_Plant_ID(self):
+        params.plant_ID = self.Plant_ID_lineEdit.text()
+        proc.set_agriMRI_folder_structure()
+        if params.experiment_ID == '' or params.experiment_ID == 'Please set ID!': self.Experiment_ID_lineEdit.setText('Please set ID!')
+        
+        if os.path.isfile(params.agriMRI_folder_structure + 'AgriMRI_Metadata.json') == True:
+            params.load_AgriMRI_Metadata_file_json()
+            params.laod_phenological_phases_library()
+            self.load_params()
+        else: print('No .json AgriMRI metadata file!!')
+        
+        params.saveFileAgriMRIParameter()
+        
+    def set_Plant_Part_ID(self):
+        params.plant_part_ID = self.Plant_Part_ID_lineEdit.text()
+        proc.set_agriMRI_folder_structure()
+        if params.experiment_ID == '' or params.experiment_ID == 'Please set ID!': self.Experiment_ID_lineEdit.setText('Please set ID!')
+        if params.plant_ID == '' or params.plant_ID == 'Please set ID!': self.Plant_ID_lineEdit.setText('Please set ID!')
+        
+        if os.path.isfile(params.agriMRI_folder_structure + 'AgriMRI_Metadata.json') == True:
+            params.load_AgriMRI_Metadata_file_json()
+            params.laod_phenological_phases_library()
+            self.load_params()
+        else: print('No .json AgriMRI metadata file!!')
+        
+        params.saveFileAgriMRIParameter()
+        
+    def set_Species(self):
+        params.plant_species_index = self.Plant_Species_comboBox.currentIndex()
+        params.plant_species = params.plant_species_list[self.Plant_Species_comboBox.currentIndex()]
+        params.plant_scientific_name = params.plant_species_library[self.Plant_Species_comboBox.currentIndex()][2]
+        params.plant_taxonomy = params.plant_species_library[self.Plant_Species_comboBox.currentIndex()][3]
+        params.plant_BBCH_scale = params.plant_species_library[self.Plant_Species_comboBox.currentIndex()][4]
+        
+        params.laod_phenological_phases_library()
+        
+        params.plant_phenological_phase_index = 0
+        params.plant_phenological_phase = params.plant_phenological_phases_library [0][1]
+        
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Phenological_Phase(self):
+        params.plant_phenological_phase_index = self.Plant_Phenological_Phase_comboBox.currentIndex()
+        params.plant_phenological_phase = params.plant_phenological_phases_library [self.Plant_Phenological_Phase_comboBox.currentIndex()][1]
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def show_Phase_Images(self):
+        if params.plant_BBCH_scale == 'Cereals': page_number = 18
+        elif params.plant_BBCH_scale == 'Rice': page_number = 23
+        elif params.plant_BBCH_scale == 'Maize': page_number = 27
+        elif params.plant_BBCH_scale == 'Cucurbits': page_number = 134
+        elif params.plant_BBCH_scale == 'Soybean': page_number = 99
+        else: page_number = 10
+        QDesktopServices.openUrl(QUrl('https://www.openagrar.de/servlets/MCRFileNodeServlet/openagrar_derivate_00010428/BBCH-Skala_en.pdf#page=' + str(page_number)))
+        
+    def set_Date_Of_Sowing(self):
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_measurement_date = self.Plant_Measurement_Date_dateEdit.date().toPyDate()
+        params.plant_measurement_das = (params.plant_measurement_date - params.plant_date_of_sowing).days
+        for n in range(10):
+            if params.plant_nutrient_date[n] != '':
+                params.plant_nutrient_das[n] = (params.plant_nutrient_date[n] - params.plant_date_of_sowing).days
+            if params.plant_stimulant_date[n] != '':
+                params.plant_stimulant_das[n] = (params.plant_stimulant_date[n] - params.plant_date_of_sowing).days
+            if params.plant_protection_date[n] != '':
+                params.plant_protection_das[n] = (params.plant_protection_date[n] - params.plant_date_of_sowing).days
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Measurement_Date(self):
+        params.plant_measurement_date = self.Plant_Measurement_Date_dateEdit.date().toPyDate()
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_measurement_das = (params.plant_measurement_date - params.plant_date_of_sowing).days
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Measurement_Date_Today(self):
+        params.plant_measurement_date = datetime.date.today()
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_measurement_das = (params.plant_measurement_date - params.plant_date_of_sowing).days
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Measurement_DAS(self):
+        params.plant_measurement_das = self.Plant_Measurement_DAS_spinBox.value()
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_measurement_date = params.plant_date_of_sowing + datetime.timedelta(days = params.plant_measurement_das)
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Nutrient_Application(self):
+        params.plant_nutrient_application_index = self.Plant_Nutrient_Application_comboBox.currentIndex()
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Nutrient_Date(self):
+        params.plant_nutrient_date[params.plant_nutrient_application_index] = self.Plant_Nutrient_Date_dateEdit.date().toPyDate()
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_nutrient_das[params.plant_nutrient_application_index] = (params.plant_nutrient_date[params.plant_nutrient_application_index] - params.plant_date_of_sowing).days
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Nutrient_DAS(self):
+        params.plant_nutrient_das[params.plant_nutrient_application_index] = self.Plant_Nutrient_DAS_spinBox.value()
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_nutrient_date[params.plant_nutrient_application_index] = params.plant_date_of_sowing + datetime.timedelta(days = params.plant_nutrient_das[params.plant_nutrient_application_index])
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Stimulant_Application(self):
+        params.plant_stimulant_application_index = self.Plant_Stimulant_Application_comboBox.currentIndex()
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Stimulant_Date(self):
+        params.plant_stimulant_date[params.plant_stimulant_application_index] = self.Plant_Stimulant_Date_dateEdit.date().toPyDate()
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_stimulant_das[params.plant_stimulant_application_index] = (params.plant_stimulant_date[params.plant_stimulant_application_index] - params.plant_date_of_sowing).days
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Stimulant_DAS(self):
+        params.plant_stimulant_das[params.plant_stimulant_application_index] = self.Plant_Stimulant_DAS_spinBox.value()
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_stimulant_date[params.plant_stimulant_application_index] = params.plant_date_of_sowing + datetime.timedelta(days = params.plant_stimulant_das[params.plant_stimulant_application_index])
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Protection_Application(self):
+        params.plant_protection_application_index = self.Plant_Protection_Application_comboBox.currentIndex()
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Protection_Date(self):
+        params.plant_protection_date[params.plant_protection_application_index] = self.Plant_Protection_Date_dateEdit.date().toPyDate()
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_protection_das[params.plant_protection_application_index] = (params.plant_protection_date[params.plant_protection_application_index] - params.plant_date_of_sowing).days
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Protection_DAS(self):
+        params.plant_protection_das[params.plant_protection_application_index] = self.Plant_Protection_DAS_spinBox.value()
+        params.plant_date_of_sowing = self.Plant_Date_Of_Sowing_dateEdit.date().toPyDate()
+        params.plant_protection_date[params.plant_protection_application_index] = params.plant_date_of_sowing + datetime.timedelta(days = params.plant_protection_das[params.plant_protection_application_index])
+        self.load_params()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Experiment_Description(self):
+        params.experiment_description = self.Experiment_Description_textEdit.toPlainText()
+        params.saveFileAgriMRIParameter()
+        
+    def set_Plant_Description(self):
+        params.plant_description = self.Plant_Description_textEdit.toPlainText()
+        params.saveFileAgriMRIParameter()
+        
 
 class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
     connected = pyqtSignal()
@@ -2308,12 +2931,13 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
 
         self.ui = loadUi('ui/tools.ui')
         self.setWindowTitle('Tools')
-        self.setGeometry(420, 40, 760, 830)
+        self.setGeometry(420, 40, 760, 940)
         
         self.Tool_Auto_Sequence_radioButton.toggled.connect(self.update_params)
 
         self.Autocenter_pushButton.setEnabled(params.connectionmode)
         self.Flipangle_pushButton.setEnabled(params.connectionmode)
+        self.Flip_Angle_Check_pushButton.setEnabled(params.connectionmode)
         self.Tool_Shim_pushButton.setEnabled(params.connectionmode)
         self.Field_Map_B0_pushButton.setEnabled(params.connectionmode)
         self.Field_Map_B0_Slice_pushButton.setEnabled(params.connectionmode)
@@ -2321,6 +2945,7 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
         self.Field_Map_B1_Slice_pushButton.setEnabled(params.connectionmode)
         self.Field_Map_Gradient_pushButton.setEnabled(params.connectionmode)
         self.Field_Map_Gradient_Slice_pushButton.setEnabled(params.connectionmode)
+        self.PB_Marker_Cal_pushButton.setEnabled(params.connectionmode)
 
         self.AC_Start_Frequency_doubleSpinBox.setKeyboardTracking(False)
         self.AC_Start_Frequency_doubleSpinBox.valueChanged.connect(self.update_params)
@@ -2334,8 +2959,10 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
         self.FA_Stop_Attenuation_doubleSpinBox.valueChanged.connect(self.update_params)
         self.FA_Attenuation_Steps_spinBox.setKeyboardTracking(False)
         self.FA_Attenuation_Steps_spinBox.valueChanged.connect(self.update_params)
+        
         self.Autocenter_pushButton.clicked.connect(lambda: self.Autocentertool())
         self.Flipangle_pushButton.clicked.connect(lambda: self.Flipangletool())
+        self.Flip_Angle_Check_pushButton.clicked.connect(lambda: self.FAchecktool())
 
         self.Tool_Shim_Start_spinBox.setKeyboardTracking(False)
         self.Tool_Shim_Start_spinBox.valueChanged.connect(self.update_params)
@@ -2378,10 +3005,17 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
         self.GradientScaling_ZMeasured_doubleSpinBox.setKeyboardTracking(False)
         self.GradientScaling_ZMeasured_doubleSpinBox.valueChanged.connect(self.update_gradsenstoolvaluesauto)
         
+        self.PB_Marker_Cal_pushButton.clicked.connect(lambda: self.PB_Marker_Calibration())
+        
         self.ErnstAngleCalculator_T1_spinBox.valueChanged.connect(self.update_ernstanglecalc)
         self.ErnstAngleCalculator_TR_spinBox.valueChanged.connect(self.update_ernstanglecalc)
         self.update_ernstanglecalc()
-
+        
+        self.label_27.setStyleSheet('font-size: 12px')
+        self.label_29.setStyleSheet('font-size: 12px')
+        
+        self.label_36.setStyleSheet('font-size: 14px')
+        
     def load_params(self):
         if params.toolautosequence == 1: self.Tool_Auto_Sequence_radioButton.setChecked(True)
         
@@ -2498,7 +3132,8 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
         self.repaint()
         
         if params.toolautosequence == 1 or params.GUImode == 0:
-            self.flippulselengthtemp = params.flippulselength
+            self.flippulselength_temp = 0
+            self.flippulselength_temp = params.flippulselength
             params.flippulselength = params.RFpulselength
 
             proc.Autocentertool()
@@ -2542,7 +3177,7 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
             self.AC_Reffrequency_lineEdit.setFont(self.font)
             self.AC_Reffrequency_lineEdit.setText(str(params.Reffrequency))
 
-            params.flippulselength = self.flippulselengthtemp
+            params.flippulselength = self.flippulselength_temp
 
             self.Autocenter_pushButton.setEnabled(True)
             self.repaint()
@@ -2562,7 +3197,8 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
         self.repaint()
         
         if params.toolautosequence == 1 or params.GUImode == 0:
-            self.flippulselengthtemp = params.flippulselength
+            self.flippulselength_temp = 0
+            self.flippulselength_temp = params.flippulselength
             params.flippulselength = params.RFpulselength
 
             proc.Flipangletool()
@@ -2607,7 +3243,7 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
             self.FA_RefRFattenuation_lineEdit.setFont(self.font)
             self.FA_RefRFattenuation_lineEdit.setText(str(params.RefRFattenuation))
 
-            params.flippulselength = self.flippulselengthtemp
+            params.flippulselength = self.flippulselength_temp
 
             self.Flipangle_pushButton.setEnabled(True)
             self.repaint()
@@ -2619,6 +3255,56 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
             self.FA_RefRFattenuation_lineEdit.setText('Select spectroscopy!')
             
             self.Flipangle_pushButton.setEnabled(True)
+            self.repaint()
+            
+    def FAchecktool(self):
+        self.Flip_Angle_Check_pushButton.setEnabled(False)
+        self.repaint()
+        
+        if params.toolautosequence == 1 or params.GUImode == 0:
+            self.flippulselength_temp = 0
+            self.flippulselength_temp = params.flippulselength
+            params.flippulselength = params.RFpulselength
+
+            proc.FAchecktool()
+            
+            if params.single_plot == 1:
+                if self.fig_canvas != None: self.fig_canvas.hide()
+                if self.IMag_canvas != None: self.IMag_canvas.hide()
+                if self.IPha_canvas != None: self.IPha_canvas.hide()
+                if self.FMB0_canvas != None: self.FMB0_canvas.hide()
+                if self.FMB1_canvas != None: self.FMB1_canvas.hide()
+
+            self.fig = Figure()
+            self.fig.set_facecolor('None')
+            self.fig_canvas = FigureCanvas(self.fig)
+
+            self.ax = self.fig.add_subplot(111)
+            self.FAvalues = np.linspace(0, 180, 19)            
+            self.ax.plot(self.FAvalues, np.transpose(params.FAvalues[1, :]), 'o-', color='#000000')
+            self.ax.plot([90 , 90], [0, 1.1 * np.max(np.transpose(params.FAvalues[1, :]))], '-', color='#000000')
+            self.ax.set_xlabel('Flip angle [°]')
+            self.ax.set_ylabel('Signal')
+            self.ax.set_title('Flipangle Signals')
+
+            self.ax.set_xticks(self.FAvalues)
+            self.ax.grid(which='major', color='#888888', linestyle='-')
+            self.ax.grid(which='both', visible=True)
+            self.ax.set_xlim((0, 180))
+            self.ax.set_ylim((0, 1.1 * np.max(np.transpose(params.FAvalues[1, :]))))
+
+            self.fig_canvas.draw()
+            self.fig_canvas.setWindowTitle('Tool Plot')
+            self.fig_canvas.setGeometry(420, 40, 1160, 950)
+            self.fig_canvas.show()
+            
+            params.flippulselength = self.flippulselength_temp
+
+            self.Flip_Angle_Check_pushButton.setEnabled(True)
+            self.repaint()
+            
+        else:
+            self.Flip_Angle_Check_pushButton.setEnabled(True)
             self.repaint()
 
     def Shimtool(self):
@@ -2721,6 +3407,8 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
                 else: self.Tool_Shim_Z2_Ref_lineEdit.setText('')
                 
                 params.STgrad[0] = 1
+                
+                np.savetxt('data/Tool_data/Shim_data.txt', params.STvalues)
 
             else:
                 self.font = self.Tool_Shim_X_Ref_lineEdit.font()
@@ -2863,7 +3551,7 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
                 params.STgrad[1] = int(params.STvalues[0, np.argmax(params.STvalues[1, :])])
                 params.grad[0] = params.STgrad[1]
                 
-                params.frequency = self.frequency_temp
+                params.frequency = params.STvalues[5, np.argmax(params.STvalues[1, :])]
                 params.ToolShimChannel = [0, 1, 0, 0]
                 params.saveFileParameter()
                 
@@ -2874,7 +3562,7 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
                 params.STgrad[2] = int(params.STvalues[0, np.argmax(params.STvalues[2, :])])
                 params.grad[1] = params.STgrad[2]
                 
-                params.frequency = self.frequency_temp
+                params.frequency = params.STvalues[6, np.argmax(params.STvalues[2, :])]
                 params.ToolShimChannel = [0, 0, 1, 0]
                 params.saveFileParameter()
                 
@@ -2885,7 +3573,7 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
                 params.STgrad[3] = int(params.STvalues[0, np.argmax(params.STvalues[3, :])])
                 params.grad[2] = params.STgrad[3]
                 
-                params.frequency = self.frequency_temp
+                params.frequency = params.STvalues[7, np.argmax(params.STvalues[3, :])]
                 params.ToolShimChannel = [0, 0, 0, 1]
                 params.saveFileParameter()
                 
@@ -2896,7 +3584,7 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
                 params.STgrad[4] = int(params.STvalues[0, np.argmax(params.STvalues[4, :])])
                 params.grad[3] = params.STgrad[4]
                 
-                params.frequency = self.frequency_temp
+                params.frequency = params.STvalues[8, np.argmax(params.STvalues[4, :])]
                 params.ToolShimChannel = [1, 0, 0, 0]
                 params.saveFileParameter()
                 
@@ -2907,7 +3595,7 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
                 params.STgrad[1] = int(params.STvalues[0, np.argmax(params.STvalues[1, :])])
                 params.grad[0] = params.STgrad[1]
                 
-                params.frequency = self.frequency_temp
+                params.frequency = params.STvalues[5, np.argmax(params.STvalues[1, :])]
                 params.ToolShimChannel = [0, 1, 0, 0]
                 params.saveFileParameter()
                 
@@ -2916,7 +3604,31 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
                 params.AutoSTvalues[2, :] = params.STvalues[0, :]
                 params.AutoSTvalues[3, :] = params.STvalues[2, :]
                 params.STgrad[2] = int(params.STvalues[0, np.argmax(params.STvalues[2, :])])
+                print(params.STgrad[2])
                 params.grad[1] = params.STgrad[2]
+                
+                params.frequency = params.STvalues[6, np.argmax(params.STvalues[2, :])]
+                params.ToolShimChannel = [0, 0, 1, 0]
+                params.saveFileParameter()
+                
+                proc.Shimtool()
+                
+                params.AutoSTvalues[4, :] = params.STvalues[0, :]
+                params.AutoSTvalues[5, :] = params.STvalues[3, :]
+                params.STgrad[3] = int(params.STvalues[0, np.argmax(params.STvalues[3, :])])
+                params.grad[2] = params.STgrad[3]
+                
+                params.frequency = params.STvalues[7, np.argmax(params.STvalues[3, :])]
+                params.ToolShimChannel = [0, 0, 0, 1]
+                params.saveFileParameter()
+                
+                proc.Shimtool()
+                
+                params.AutoSTvalues[6, :] = params.STvalues[0, :]
+                params.AutoSTvalues[7, :] = params.STvalues[4, :]
+                params.STgrad[4] = int(params.STvalues[0, np.argmax(params.STvalues[4, :])])
+                print(params.STgrad[4])
+                params.grad[3] = params.STgrad[4]
                 
                 params.frequency = self.frequency_temp
                 params.saveFileParameter()
@@ -2941,7 +3653,7 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
             
             params.saveFileParameter()
                         
-            np.savetxt('tooldata/Auto_Shim_Tool_Data.txt', np.transpose(params.AutoSTvalues))
+            np.savetxt('data/Tool_data/Auto_Shim_data.txt', np.transpose(params.AutoSTvalues))
             
             if params.single_plot == 1:
                 if self.fig_canvas != None: self.fig_canvas.hide()
@@ -3357,6 +4069,82 @@ class ToolsWindow(Tools_Window_Form, Tools_Window_Base):
 
         self.Field_Map_Gradient_Slice_pushButton.setEnabled(True)
         self.repaint()
+        
+    def PB_Marker_Calibration(self):
+        self.PB_Marker_Cal_pushButton.setEnabled(False)
+        self.repaint()
+        
+        if params.toolautosequence == 1 or params.GUImode == 4:
+        
+            proc.PBMarkerCalProjection()
+            
+            if params.toolautosequence == 1:
+                self.nPE_temp = 0
+                self.nPE_temp = params.nPE
+                self.FOV_temp = 0
+                self.FOV_temp = params.FOV
+
+                params.nPE = 128
+                params.FOV = 22
+                
+            self.freqencyaxis = np.linspace(-params.FOV/2,params.FOV/2,num=params.nPE)
+                
+            self.spectrumfft_center = int(params.spectrumfft.shape[0] / 2)
+            
+            self.spectrumfft = []
+            self.spectrumfft = params.spectrumfft[self.spectrumfft_center - int(params.nPE / 2 * params.ROBWscaler):self.spectrumfft_center + int(params.nPE / 2 * params.ROBWscaler)]
+
+            if params.single_plot == 1:
+                if self.fig_canvas != None: self.fig_canvas.hide()
+                if self.IMag_canvas != None: self.IMag_canvas.hide()
+                if self.IPha_canvas != None: self.IPha_canvas.hide()
+                if self.FMB0_canvas != None: self.FMB0_canvas.hide()
+                if self.FMB1_canvas != None: self.FMB1_canvas.hide()
+
+            self.fig = Figure()
+            self.fig.set_facecolor('None')
+            self.fig_canvas = FigureCanvas(self.fig)
+
+            self.ax1 = self.fig.add_subplot(1, 1, 1)
+
+            self.ax1.plot(self.freqencyaxis, self.spectrumfft)
+            self.ax1.plot([0, 0], [0, 1.1 * np.max(self.spectrumfft)], color='#000000',linewidth=2)
+            self.ax1.plot(self.freqencyaxis, self.spectrumfft, color='#000000')
+            self.ax1.set_xlim([-params.FOV / 2, params.FOV / 2])
+            self.ax1.set_ylim([0, 1.1 * np.max(self.spectrumfft)])
+            self.ax1.set_title('Y - Projection')
+            self.ax1.set_ylabel('RX Signal [arb.]')
+            self.ax1.set_xlabel('Y in mm')
+            self.major_ticks = np.arange(-params.FOV / 2, params.FOV / 2 + 1, 1)
+            self.minor_ticks = np.arange(-params.FOV / 2, params.FOV / 2 + 0.2, 0.2)
+            self.ax1.set_xticks(self.major_ticks)
+            self.ax1.set_xticks(self.minor_ticks, minor=True)
+            self.ax1.grid(which='major', color='#888888', linestyle='-')
+            self.ax1.grid(which='minor', color='#888888', linestyle=':')
+            self.ax1.grid(which='both', visible=True)
+            self.fig_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+            self.fig_canvas.setGeometry(420, 40, 1160, 950)
+            self.fig_canvas.show()
+            
+            params.Ref_PB_marker_isocenter_distance = np.round(params.PB_marker_isocenter_distance - self.freqencyaxis[np.argmax(self.spectrumfft)],1)
+            
+            self.font = self.PB_Marker_Cal_MIC_Dist_lineEdit.font()
+            self.font.setPointSize(12)
+            self.PB_Marker_Cal_MIC_Dist_lineEdit.setFont(self.font)
+            self.PB_Marker_Cal_MIC_Dist_lineEdit.setText(str(params.Ref_PB_marker_isocenter_distance))
+            
+            if params.toolautosequence == 1:
+                params.nPE = self.nPE_temp
+                params.FOV = self.FOV_temp
+                
+        else:
+            self.font = self.PB_Marker_Cal_MIC_Dist_lineEdit.font()
+            self.font.setPointSize(10)
+            self.PB_Marker_Cal_MIC_Dist_lineEdit.setFont(self.font)
+            self.PB_Marker_Cal_MIC_Dist_lineEdit.setText('Select projections!')
+
+        self.PB_Marker_Cal_pushButton.setEnabled(True)
+        self.repaint()
 
 
 class ProtocolWindow(Protocol_Window_Form, Protocol_Window_Base):
@@ -3697,7 +4485,9 @@ class ProtocolWindow(Protocol_Window_Form, Protocol_Window_Base):
                                             , 'Inversion Recovery (SE, Slice)', 'Saturation Inversion Recovery (FID, Slice)', 'Saturation Inversion Recovery (SE, Slice)' \
                                             , 'Echo Planar Spectrum (FID, 4 Echos, Slice)', 'Echo Planar Spectrum (SE, 4 Echos, Slice)', 'Turbo Spin Echo (4 Echos, Slice)' \
                                             , 'RF Loopback Test Sequence (Rect, Flip)', 'RF Loopback Test Sequence (Rect, 180°)', 'RF Loopback Test Sequence (Sinc, Flip)' \
-                                            , 'RF Loopback Test Sequence (Sinc, 180°)', 'Gradient Test Sequence', 'RF SAR Calibration Test Sequence')
+                                            , 'RF Loopback Test Sequence (Sinc, 180°)', 'RF Loopback Test Sequence (Rect, inverse Flip)', 'RF Loopback Test Sequence (Rect, inverse 180°)' \
+                                            , 'RF Loopback Test Sequence (Sinc, inverse Flip)', 'RF Loopback Test Sequence (Sinc, inverse 180°)', 'Gradient Test Sequence' \
+                                            , 'RF SAR Calibration Test Sequence')
                 self.Protocol_Table_tableWidget.setItem(n, 0, QTableWidgetItem(self.Prot_Table_GUImode))
                 self.Protocol_Table_tableWidget.setItem(n, 1, QTableWidgetItem(self.Prot_Table_sequence[int(self.protocol[n, 1])]))
             elif self.protocol[n, 0] == 1:
@@ -3778,7 +4568,7 @@ class ProtocolWindow(Protocol_Window_Form, Protocol_Window_Base):
     def protocol_load_protocol(self):
         if os.path.isdir(self.prot_datapath) == True:
             if os.path.isfile(self.prot_datapath + '/Protocol.txt') == True:
-                self.protocoltemp = np.genfromtxt(self.prot_datapath + '/Protocol.txt')
+                self.protocoltemp = np.genfromtxt(self.prot_datapath + '/Protocol.txt', ndmin=2)
                 self.protocol = np.matrix(np.zeros((self.protocoltemp.shape[0] + 1, self.protocoltemp.shape[1])))
                 self.protocol[0:self.protocoltemp.shape[0], :] = self.protocoltemp[:, :]
                 self.protocol_plot_table()
@@ -3877,6 +4667,20 @@ class ProtocolWindow(Protocol_Window_Form, Protocol_Window_Base):
         self.repaint()
 
     def protocol_acquire(self):
+        if params.agriMRI_mode == 1:
+            self.datapath_temp = ''
+            self.datapath_temp = params.datapath
+            self.agriMRI_folder_structure_temp = ''
+            self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+            
+            if params.agriMRI_folder_structure != 'rawdata/': params.save_AgriMRI_Metadata_file_json()
+            else: print('\033[1m' + 'No experiment ID set!! Save data to rawdata folder.' + '\033[0m')
+            
+            params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_rawdata'
+            if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+            params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/'
+            params.datapath = params.agriMRI_folder_structure + params.datapath
+        
         if params.GUImode == 2:
             if params.sequence == 0:
                 proc.T1measurement_IR_FID()
@@ -3983,17 +4787,17 @@ class ProtocolWindow(Protocol_Window_Form, Protocol_Window_Base):
                     proc.spectrum_analytics()
                     params.frequency = params.centerfrequency
                     params.saveFileParameter()
-                    print('Autorecenter to: ', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     params.frequencyoffset = self.frequencyoffsettemp
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                     seq.sequence_upload()
                 elif params.sequence == 17 or params.sequence == 19 or params.sequence == 21 \
                         or params.sequence == 24 or params.sequence == 26 or params.sequence == 29 \
@@ -4009,17 +4813,17 @@ class ProtocolWindow(Protocol_Window_Form, Protocol_Window_Base):
                     proc.spectrum_analytics()
                     params.frequency = params.centerfrequency
                     params.saveFileParameter()
-                    print('Autorecenter to: ', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     params.frequencyoffset = self.frequencyoffsettemp
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                     seq.sequence_upload()
                 elif params.sequence == 1 or params.sequence == 3 or params.sequence == 5 \
                         or params.sequence == 6 or params.sequence == 8 or params.sequence == 10 \
@@ -4036,17 +4840,17 @@ class ProtocolWindow(Protocol_Window_Form, Protocol_Window_Base):
                     proc.spectrum_analytics()
                     params.frequency = params.centerfrequency
                     params.saveFileParameter()
-                    print('Autorecenter to: ', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     params.frequencyoffset = self.frequencyoffsettemp
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                     seq.sequence_upload()
                 elif params.sequence == 18 or params.sequence == 20 or params.sequence == 22 \
                         or params.sequence == 23 or params.sequence == 25 or params.sequence == 27 \
@@ -4063,21 +4867,22 @@ class ProtocolWindow(Protocol_Window_Form, Protocol_Window_Base):
                     proc.spectrum_analytics()
                     params.frequency = params.centerfrequency
                     params.saveFileParameter()
-                    print('Autorecenter to: ', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     params.frequencyoffset = self.frequencyoffsettemp
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                     seq.sequence_upload()
             else:
                 seq.sequence_upload()
         elif params.GUImode == 6:
+            print('Pause: ' + str(params.TR) + 's')
             msg_box = QMessageBox()
             msg_box.setText('Pause: ' + str(params.TR) + 's')
             msg_box.setStandardButtons(QMessageBox.Ok)
@@ -4086,6 +4891,7 @@ class ProtocolWindow(Protocol_Window_Form, Protocol_Window_Base):
             msg_box.exec()
         elif params.GUImode == 7:
             self.protocol_messagebox_string = ('Change Sample!', 'Move Sample!', 'Rotate Sample!')
+            print(self.protocol_messagebox_string[int(params.sequence)])
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Warning)
             msg_box.setText(self.protocol_messagebox_string[int(params.sequence)])
@@ -4100,6 +4906,10 @@ class ProtocolWindow(Protocol_Window_Form, Protocol_Window_Base):
             params.save_header_file_txt()
         else:
             params.save_header_file_json()
+            
+        if params.agriMRI_mode == 1:
+            params.datapath = self.datapath_temp
+            params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
 
 
 class PlotWindow(Plot_Window_Form, Plot_Window_Base):
@@ -4139,9 +4949,10 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
         self.Save_Mag_Image_Data_pushButton.setEnabled(False)
         self.Save_Pha_Image_Data_pushButton.setEnabled(False)
         self.Hist_pushButton.setEnabled(False)
-
+        
         if params.GUImode == 0:
-            if params.sequence == 18 or params.sequence == 19 or params.sequence == 20 or params.sequence == 21:
+            if params.sequence == 18 or params.sequence == 19 or params.sequence == 20 or params.sequence == 21 \
+               or params.sequence == 22 or params.sequence == 23 or params.sequence == 24 or params.sequence == 25:
                 self.rf_loopback_test_spectrum_plot_init()
             else:
                 self.spectrum_plot_init()
@@ -4200,13 +5011,16 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
         elif params.GUImode == 5:
             if params.sequence == 0 or params.sequence == 1 or params.sequence == 2 or params.sequence == 3 \
                 or params.sequence == 4  or params.sequence == 5 or params.sequence == 6 or params.sequence == 7 \
-                 or params.sequence == 8 or params.sequence == 9:
+                or params.sequence == 8 or params.sequence == 9:
                 params.imageminimum = np.min(params.img_st_mag)
                 self.Image_Minimum_doubleSpinBox.setValue(params.imageminimum)
                 params.imagemaximum = np.max(params.img_st_mag)
                 self.Image_Maximum_doubleSpinBox.setValue(params.imagemaximum)
-                self.imaging_stitching_plot_init()
-                if params.imageorientation == 'ZX' or params.imageorientation == 'XZ': self.View_3D_Data_pushButton.setEnabled(True)
+                params.image_stitching_slice = 0
+                if params.imageorientation == 'ZX' or params.imageorientation == 'XZ':
+                    self.imaging_stitching_plot_init()
+                    self.View_3D_Data_pushButton.setEnabled(True)  
+                else: self.imaging_stitching_plot_init()
                 self.Save_Image_Data_pushButton.setEnabled(True)
                 self.Save_Mag_Image_Data_pushButton.setEnabled(True)
                 self.Save_Pha_Image_Data_pushButton.setEnabled(True)
@@ -4245,6 +5059,10 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
         self.Image_Maximum_doubleSpinBox.valueChanged.connect(self.update_params)
 
     def load_params(self):
+        self.label.setText('Frequency Range [Hz]')
+        self.Frequncyaxisrange_spinBox.setMaximum(250000)
+        self.Frequncyaxisrange_spinBox.setMinimum(1000)
+        self.Frequncyaxisrange_spinBox.setSingleStep(1000)
         if params.GUImode == 0:
             self.Frequncyaxisrange_spinBox.setEnabled(True)
             self.Frequncyaxisrange_spinBox.setValue(params.frequencyplotrange)
@@ -4267,7 +5085,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.Animation_Step_spinBox.setValue(params.animationstep)
         elif params.GUImode == 1:
             self.Frequncyaxisrange_spinBox.setEnabled(False)
-            self.Frequncyaxisrange_spinBox.setValue(250000)
+            self.Frequncyaxisrange_spinBox.setValue(0)
             self.Center_Frequency_lineEdit.setEnabled(False)
             self.Center_Frequency_lineEdit.setText('')
             self.FWHM_lineEdit.setEnabled(False)
@@ -4287,7 +5105,16 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.Animation_Step_spinBox.setValue(params.animationstep)
         elif params.GUImode == 5:
             self.Frequncyaxisrange_spinBox.setEnabled(False)
-            self.Frequncyaxisrange_spinBox.setValue(250000)
+            self.Frequncyaxisrange_spinBox.setValue(0)
+            if params.sequence != 10:
+                if params.imageorientation == 'ZX' or params.imageorientation == 'XZ':
+                    self.Frequncyaxisrange_spinBox.setEnabled(True)
+                    self.label.setText('Slice (0 = all)')
+                    self.Frequncyaxisrange_spinBox.setMaximum(params.motor_image_count)
+                    self.Frequncyaxisrange_spinBox.setMinimum(0)
+                    self.Frequncyaxisrange_spinBox.setSingleStep(1)
+                    self.Frequncyaxisrange_spinBox.setValue(0)
+                    
             self.Center_Frequency_lineEdit.setEnabled(False)
             self.Center_Frequency_lineEdit.setText('')
             self.FWHM_lineEdit.setEnabled(False)
@@ -4307,7 +5134,6 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.Animation_Step_spinBox.setValue(params.animationstep)
 
     def update_params(self):
-        params.frequencyplotrange = self.Frequncyaxisrange_spinBox.value()
         params.imageminimum = self.Image_Minimum_doubleSpinBox.value()
         params.imagemaximum = self.Image_Maximum_doubleSpinBox.value()
         params.animationstep = self.Animation_Step_spinBox.value()
@@ -4402,12 +5228,12 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
         else:
             if os.path.isdir(params.datapath) == True:
                 if os.path.isfile(params.datapath + '/Image_Stitching_Header.json') == True:
-                    with open(params.datapath + '/Image_Stitching_Header.json', 'r') as j:
+                    with open(params.datapath + '/Image_Stitching_Header.json', 'r', encoding='utf-8') as j:
                         jsonparams = json.loads(j.read())
                 else: print('No .json header file!!')
             elif os.path.isdir(params.datapath) == False:
                 if os.path.isfile(params.datapath + '_Header.json') == True:
-                    with open(params.datapath + '_Header.json', 'r') as j:
+                    with open(params.datapath + '_Header.json', 'r', encoding='utf-8') as j:
                         jsonparams = json.loads(j.read())
                 else: print('No .json header file!!')
             else: print('No directory or .json header file!!')
@@ -4430,6 +5256,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             params.sliceoffset = jsonparams['Slice offset [mm]']
 
         if params.GUImode == 0:
+            params.frequencyplotrange = self.Frequncyaxisrange_spinBox.value()
             if params.sequence == 18 or params.sequence == 19 or params.sequence == 20 or params.sequence == 21:
                 if self.fig_canvas != None: self.fig_canvas.hide()
                 self.rf_loopback_test_spectrum_plot_init()
@@ -4460,6 +5287,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.fig_canvas.hide()
             self.projection_plot_init()
         elif params.GUImode == 5:
+            params.image_stitching_slice = self.Frequncyaxisrange_spinBox.value()
             if params.sequence == 10:
                 if self.IMag_canvas != None: self.IMag_canvas.hide()
                 if self.IPha_canvas != None: self.IPha_canvas.hide()
@@ -4471,7 +5299,10 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                 if self.IPha_canvas != None: self.IPha_canvas.hide()
                 if self.all_canvas != None: self.all_canvas.hide()
                 if self.hist_canvas != None: self.hist_canvas.hide()
-                self.imaging_stitching_plot_init()
+                if params.imageorientation == 'ZX' or params.imageorientation == 'XZ':
+                    if params.image_stitching_slice == 0: self.imaging_stitching_plot_init()
+                    else: self.imaging_stitching_single_plot_init()
+                else: self.imaging_stitching_plot_init()
                 
         params.datapath = self.datapath_plot_temp
             
@@ -4505,7 +5336,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
         self.ax1.set_ylim([0, 1.1 * np.max(params.spectrumfft)])
         self.ax1.set_title('Spectrum')
         self.ax1.set_ylabel('RX Signal [arb.]')
-        self.ax1.set_xlabel('$\Delta$ Frequency [Hz]')
+        self.ax1.set_xlabel(r'$\Delta$ Frequency [Hz]')
         self.major_ticks = np.linspace(-params.frequencyplotrange / 2, params.frequencyplotrange / 2, 11)
         self.minor_ticks = np.linspace(-params.frequencyplotrange / 2, params.frequencyplotrange / 2, 51)
         self.ax1.set_xticks(self.major_ticks)
@@ -4547,7 +5378,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
         self.ax1.set_ylim([0, 1.1 * np.max(params.spectrumfft)])
         self.ax1.set_title('Spectrum')
         self.ax1.set_ylabel('RX Signal [arb.]')
-        self.ax1.set_xlabel('$\Delta$ Frequency [Hz]')
+        self.ax1.set_xlabel(r'$\Delta$ Frequency [Hz]')
         self.major_ticks = np.linspace(-params.frequencyplotrange / 2, params.frequencyplotrange / 2, 11)
         self.minor_ticks = np.linspace(-params.frequencyplotrange / 2, params.frequencyplotrange / 2, 51)
         self.ax1.set_xticks(self.major_ticks)
@@ -4559,12 +5390,12 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
         self.ax2.plot(params.timeaxis, params.mag, label='Magnitude')
         self.ax2.plot(params.timeaxis, params.real, label='Real')
         self.ax2.plot(params.timeaxis, params.imag, label='Imaginary')
-        self.ax2.set_xlim([0, params.timeaxis[int(params.timeaxis.shape[0] - 1)]])
+        self.ax2.set_xlim([params.timeaxis[0], params.timeaxis[int(params.timeaxis.shape[0] - 1)]])
         self.ax2.set_title('Signal')
         self.ax2.set_ylabel('RX Signal [mV]')
         self.ax2.set_xlabel('time [µs]')
-        self.major_ticks = np.linspace(0, int(math.ceil(params.timeaxis[int(params.timeaxis.shape[0] - 1)])), int((int(params.timeaxis[int(params.timeaxis.shape[0] - 1)]))/10) + 1)
-        self.minor_ticks = np.linspace(0, int(math.ceil(params.timeaxis[int(params.timeaxis.shape[0] - 1)])), int((int(params.timeaxis[int(params.timeaxis.shape[0] - 1)]) * 5)/10) + 1)
+        self.major_ticks = np.arange(math.floor(params.timeaxis[0]), math.ceil(params.timeaxis[int(params.timeaxis.shape[0] - 1)]), 10)
+        self.minor_ticks = np.arange(math.floor(params.timeaxis[0]), math.ceil(params.timeaxis[int(params.timeaxis.shape[0] - 1)]), 2)
         self.ax2.set_xticks(self.major_ticks)
         self.ax2.set_xticks(self.minor_ticks, minor=True)
         self.ax2.grid(which='major', color='#888888', linestyle='-')
@@ -4589,7 +5420,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.ax1.set_ylim([0, 1.1 * np.max(params.projx[:, 3])])
             self.ax1.set_title('X - Spectrum')
             self.ax1.set_ylabel('RX Signal [arb.]')
-            self.ax1.set_xlabel('$\Delta$ Frequency [Hz]')
+            self.ax1.set_xlabel(r'$\Delta$ Frequency [Hz]')
             self.major_ticks = np.linspace(-params.frequencyplotrange / 2, params.frequencyplotrange / 2, 11)
             self.minor_ticks = np.linspace(-params.frequencyplotrange / 2, params.frequencyplotrange / 2, 51)
             self.ax1.set_xticks(self.major_ticks)
@@ -4622,7 +5453,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.ax3.set_ylim([0, 1.1 * np.max(params.projy[:, 3])])
             self.ax3.set_title('Y - Spectrum')
             self.ax3.set_ylabel('RX Signal [arb.]')
-            self.ax3.set_xlabel('$\Delta$ Frequency [Hz]')
+            self.ax3.set_xlabel(r'$\Delta$ Frequency [Hz]')
             self.major_ticks = np.linspace(-params.frequencyplotrange / 2, params.frequencyplotrange / 2, 11)
             self.minor_ticks = np.linspace(-params.frequencyplotrange / 2, params.frequencyplotrange / 2, 51)
             self.ax3.set_xticks(self.major_ticks)
@@ -4655,7 +5486,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.ax5.set_ylim([0, 1.1 * np.max(params.projz[:, 3])])
             self.ax5.set_title('Z - Spectrum')
             self.ax5.set_ylabel('RX Signal [arb.]')
-            self.ax5.set_xlabel('$\Delta$ Frequency [Hz]')
+            self.ax5.set_xlabel(r'$\Delta$ Frequency [Hz]')
             self.major_ticks = np.linspace(-params.frequencyplotrange / 2, params.frequencyplotrange / 2, 11)
             self.minor_ticks = np.linspace(-params.frequencyplotrange / 2, params.frequencyplotrange / 2, 51)
             self.ax5.set_xticks(self.major_ticks)
@@ -4724,7 +5555,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
         self.ax.grid(which='minor', color='#888888', linestyle=':')
         self.ax.grid(which='both', visible=True)
         self.ax.set_xlim((0, math.ceil(params.T1xvalues[int(params.T1xvalues.shape[0] - 1)] / 1000) * 1000))
-        self.ax.set_ylim(0, 1.1 * np.max(params.T1yvalues1))
+        #self.ax.set_ylim(0, 1.1 * np.max(params.T1yvalues1))
         self.ax.legend(loc='lower right')
         self.ax.set_title('T1 = ' + str(params.T1) + 'ms, r = ' + str(round(params.T1linregres.rvalue, 2)))
 
@@ -4797,7 +5628,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
         self.ax.grid(which='minor', color='#888888', linestyle=':')
         self.ax.grid(which='both', visible=True)
         self.ax.set_xlim((0, math.ceil(params.T2xvalues[int(params.T2xvalues.shape[0] - 1)] / 1000) * 1000))
-        self.ax.set_ylim(0, 1.1 * np.max(params.T2yvalues))
+        #self.ax.set_ylim(0, 1.1 * np.max(params.T2yvalues))
         self.ax.legend()
         self.ax.set_title('T2 = ' + str(params.T2) + 'ms, r = ' + str(round(params.T2linregres.rvalue, 2)))
 
@@ -4848,7 +5679,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             else: self.IMag_ax.imshow(params.img_mag, cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
             if params.imagefilter == 1: self.IPha_ax.imshow(params.img_pha, interpolation='gaussian', cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)]);
             else: self.IPha_ax.imshow(params.img_pha, cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)]);    
-            
+                                                    
             if params.image_grid == 1:
                 self.major_ticks = np.arange(math.ceil((-params.FOV / 2)), math.floor((params.FOV / 2)) + 1, 1)
                 
@@ -4921,21 +5752,74 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             if params.projection3D == 1:
                 self.kMag_ax = self.kMag_fig.add_subplot(111, projection='3d')
                 
-                X = np.linspace(0, params.k_amp.shape[1]/250, num=params.k_amp.shape[1])
+                if params.sequence == 0 or params.sequence == 1 or params.sequence == 17 or params.sequence == 18:
+                    self.kspacestep = params.kspace.shape[1]/(params.nPE*params.radialosfactor)
+                    self.radialangles = np.arange(0, 180, params.radialanglestep)
 
-                for n in range(params.k_amp.shape[0]):
-                    Y = np.ones(params.k_amp.shape[1])
-                    Y = Y * n
-                    
-                    if params.lnkspacemag == 1:
-                        self.kMag_ax.plot(X, Y, np.log(params.k_amp[n, :]), color='#000000')
-                        self.kMag_ax.set_title('ln(k-Space Magnitude)')
-                    else:
-                        self.kMag_ax.plot(X, Y, params.k_amp[n, :], color='#000000', linewidth=0.5)
-                        self.kMag_ax.set_title('k-Space Magnitude')
+                    for n in range(params.kspace.shape[0]):
+                        X = np.zeros(params.nPE*params.radialosfactor)
+                        Y = np.zeros(params.nPE*params.radialosfactor)
+                        Z = np.zeros(params.nPE*params.radialosfactor)
+                        self.radialangleradmod100 = int((math.radians(self.radialangles[n]) % (2*np.pi))*100)
                         
+                        for m in range(params.nPE*params.radialosfactor):
+                            X[m] = params.nPE/2*params.radialosfactor + math.sin(self.radialangleradmod100/100)*(m-params.nPE/2*params.radialosfactor)
+                            Y[m] = params.nPE/2*params.radialosfactor + math.cos(self.radialangleradmod100/100)*(m-params.nPE/2*params.radialosfactor)
+                            
+                            if params.lnkspacemag == 1: Z[m] = np.log(np.abs(params.kspace[n, int(m*self.kspacestep)]))
+                            else: Z[m] = np.abs(params.kspace[n, int(m*self.kspacestep)])
+                                
+                        self.kMag_ax.plot(X, Y, Z, color='#000000', linewidth=0.5)
+                        
+                    if params.image_grid == 1:
+                        self.kMag_ax.set(xlabel='',ylabel='', zlabel='Signal')
+                            
+                elif params.sequence == 2 or params.sequence == 3 or params.sequence == 19 or params.sequence == 20:
+                    self.kspacestep = params.kspace.shape[1]/(params.nPE*params.radialosfactor)
+                    self.radialangles = np.arange(0, 360, params.radialanglestep)
+                    
+                    for n in range(params.kspace.shape[0]):
+                        X = np.zeros(params.nPE*params.radialosfactor)
+                        Y = np.zeros(params.nPE*params.radialosfactor)
+                        Z = np.zeros(params.nPE*params.radialosfactor)
+                        self.radialangleradmod100 = int(math.radians(self.radialangles[n])*100)
+
+                        for m in range(int(params.nPE*params.radialosfactor)):
+                            X[m] = params.nPE*params.radialosfactor + math.cos(self.radialangleradmod100/100)*m
+                            Y[m] = params.nPE*params.radialosfactor + math.sin(self.radialangleradmod100/100)*m
+                            
+                            if params.lnkspacemag == 1: Z[m] = np.log(np.abs(params.kspace[n, int(np.round(m*self.kspacestep))]))
+                            else: Z[m] = np.abs(params.kspace[n, int(np.round(m*self.kspacestep))])
+                        
+                        self.kMag_ax.plot(X, Y, Z, color='#000000', linewidth=0.5)
+                        
+                    if params.image_grid == 1:
+                        self.kMag_ax.set(xlabel='',ylabel='', zlabel='Signal')
+                        
+                else:
+                    X = np.linspace(0, params.k_amp.shape[1]/250, num=params.k_amp.shape[1])
+
+                    for n in range(params.k_amp.shape[0]):
+                        Y = np.ones(params.k_amp.shape[1])
+                        Y = Y * n
+                        
+                        Z = np.zeros(params.k_amp.shape[1])
+                        if params.lnkspacemag == 1:
+                            Z = np.log(params.k_amp[n, ])
+                        else:
+                            Z = params.k_amp[n, :]
+                        
+                        self.kMag_ax.plot(X, Y, Z, color='#000000', linewidth=0.5)
+
+                    if params.image_grid == 1:
+                        self.kMag_ax.set(xlabel='Time [ms]',ylabel='Phase Encoding Step', zlabel='Signal')
+                        
+                if params.lnkspacemag == 1:
+                    self.kMag_ax.set_title('ln(k-Space Magnitude)')
+                else:
+                    self.kMag_ax.set_title('k-Space Magnitude')
+                            
                 if params.image_grid == 1:
-                    self.kMag_ax.set(xlabel='Time [ms]',ylabel='Phase Encoding Step', zlabel='Signal')
                     self.kMag_ax.grid(True)
                 else:
                     self.kMag_ax.axis(False)
@@ -4950,7 +5834,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                     self.kMag_ax.set_title('ln(k-Space Magnitude)')
                 else:
                     self.kMag_ax.imshow(params.k_amp, cmap='inferno')
-                    self.kMag_ax.set_title('k-Space Magnitude')	
+                    self.kMag_ax.set_title('k-Space Magnitude')
                 
                 self.kMag_ax.axis(False)
                 self.kMag_ax.set_aspect(1.0 / self.kMag_ax.get_data_ratio())
@@ -4993,9 +5877,9 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             
             if params.imagefilter == 1: self.IMag_ax.imshow(params.img_mag, interpolation='gaussian', cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
             else: self.IMag_ax.imshow(params.img_mag, cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
-            if params.imagefilter == 1: self.IPha_ax.imshow(params.img_pha, interpolation='gaussian', cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
-            else: self.IPha_ax.imshow(params.img_pha, cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
-                    
+            if params.imagefilter == 1: self.IPha_ax.imshow(params.img_pha, interpolation='gaussian', cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)]);
+            else: self.IPha_ax.imshow(params.img_pha, cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)]);    
+                  
             if params.image_grid == 1:
                 self.major_ticks = np.linspace(math.ceil((-params.FOV / 2)), math.floor((params.FOV / 2)), math.floor((params.FOV / 2)) - math.ceil((-params.FOV / 2)) + 1)
                 
@@ -5066,21 +5950,74 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             if params.projection3D == 1:
                 self.kMag_ax = self.all_fig.add_subplot(223, projection='3d')
                 
-                X = np.linspace(0, params.k_amp.shape[1]/250, num=params.k_amp.shape[1])
+                if params.sequence == 0 or params.sequence == 1 or params.sequence == 17 or params.sequence == 18:
+                    self.kspacestep = params.kspace.shape[1]/(params.nPE*params.radialosfactor)
+                    self.radialangles = np.arange(0, 180, params.radialanglestep)
 
-                for n in range(params.k_amp.shape[0]):
-                    Y = np.ones(params.k_amp.shape[1])
-                    Y = Y * n
-                    
-                    if params.lnkspacemag == 1:
-                        self.kMag_ax.plot(X, Y, np.log(params.k_amp[n, :]), color='#000000')
-                        self.kMag_ax.set_title('ln(k-Space Magnitude)')
-                    else:
-                        self.kMag_ax.plot(X, Y, params.k_amp[n, :], color='#000000', linewidth=0.5)
-                        self.kMag_ax.set_title('k-Space Magnitude')
+                    for n in range(params.kspace.shape[0]):
+                        X = np.zeros(params.nPE*params.radialosfactor)
+                        Y = np.zeros(params.nPE*params.radialosfactor)
+                        Z = np.zeros(params.nPE*params.radialosfactor)
+                        self.radialangleradmod100 = int((math.radians(self.radialangles[n]) % (2*np.pi))*100)
                         
+                        for m in range(params.nPE*params.radialosfactor):
+                            X[m] = params.nPE/2*params.radialosfactor + math.sin(self.radialangleradmod100/100)*(m-params.nPE/2*params.radialosfactor)
+                            Y[m] = params.nPE/2*params.radialosfactor + math.cos(self.radialangleradmod100/100)*(m-params.nPE/2*params.radialosfactor)
+                            
+                            if params.lnkspacemag == 1: Z[m] = np.log(np.abs(params.kspace[n, int(m*self.kspacestep)]))
+                            else: Z[m] = np.abs(params.kspace[n, int(m*self.kspacestep)])
+                                
+                        self.kMag_ax.plot(X, Y, Z, color='#000000', linewidth=0.5)
+                        
+                    if params.image_grid == 1:
+                        self.kMag_ax.set(xlabel='',ylabel='', zlabel='Signal')
+                            
+                elif params.sequence == 2 or params.sequence == 3 or params.sequence == 19 or params.sequence == 20:
+                    self.kspacestep = params.kspace.shape[1]/(params.nPE*params.radialosfactor)
+                    self.radialangles = np.arange(0, 360, params.radialanglestep)
+                    
+                    for n in range(params.kspace.shape[0]):
+                        X = np.zeros(params.nPE*params.radialosfactor)
+                        Y = np.zeros(params.nPE*params.radialosfactor)
+                        Z = np.zeros(params.nPE*params.radialosfactor)
+                        self.radialangleradmod100 = int(math.radians(self.radialangles[n])*100)
+
+                        for m in range(int(params.nPE*params.radialosfactor)):
+                            X[m] = params.nPE*params.radialosfactor + math.cos(self.radialangleradmod100/100)*m
+                            Y[m] = params.nPE*params.radialosfactor + math.sin(self.radialangleradmod100/100)*m
+                            
+                            if params.lnkspacemag == 1: Z[m] = np.log(np.abs(params.kspace[n, int(np.round(m*self.kspacestep))]))
+                            else: Z[m] = np.abs(params.kspace[n, int(np.round(m*self.kspacestep))])
+                        
+                        self.kMag_ax.plot(X, Y, Z, color='#000000', linewidth=0.5)
+                        
+                    if params.image_grid == 1:
+                        self.kMag_ax.set(xlabel='',ylabel='', zlabel='Signal')
+                        
+                else:
+                    X = np.linspace(0, params.k_amp.shape[1]/250, num=params.k_amp.shape[1])
+
+                    for n in range(params.k_amp.shape[0]):
+                        Y = np.ones(params.k_amp.shape[1])
+                        Y = Y * n
+                        
+                        Z = np.zeros(params.k_amp.shape[1])
+                        if params.lnkspacemag == 1:
+                            Z = np.log(params.k_amp[n, ])
+                        else:
+                            Z = params.k_amp[n, :]
+                        
+                        self.kMag_ax.plot(X, Y, Z, color='#000000', linewidth=0.5)
+
+                    if params.image_grid == 1:
+                        self.kMag_ax.set(xlabel='Time [ms]',ylabel='Phase Encoding Step', zlabel='Signal')
+                        
+                if params.lnkspacemag == 1:
+                    self.kMag_ax.set_title('ln(k-Space Magnitude)')
+                else:
+                    self.kMag_ax.set_title('k-Space Magnitude')
+                            
                 if params.image_grid == 1:
-                    self.kMag_ax.set(xlabel='Time [ms]',ylabel='Phase Encoding Step', zlabel='Signal')
                     self.kMag_ax.grid(True)
                 else:
                     self.kMag_ax.axis(False)
@@ -5097,7 +6034,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                     self.kMag_ax.imshow(params.k_amp, cmap='inferno')
                     self.kMag_ax.set_title('k-Space Magnitude')	
                 
-                self.kMag_ax.axis('off')
+                self.kMag_ax.axis(False)
                 self.kMag_ax.set_aspect(1.0 / self.kMag_ax.get_data_ratio())
             
             self.kPha_ax = self.all_fig.add_subplot(224)
@@ -5118,11 +6055,10 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.IMag_fig = Figure()
             self.IMag_canvas = FigureCanvas(self.IMag_fig)
             self.IMag_fig.set_facecolor('None')
-            if params.projection3D == 0:
-                self.IPha_fig = Figure()
-                self.IPha_canvas = FigureCanvas(self.IPha_fig)
-                self.IPha_fig.set_facecolor('None')
-            
+            self.IPha_fig = Figure()
+            self.IPha_canvas = FigureCanvas(self.IPha_fig)
+            self.IPha_fig.set_facecolor('None')
+                
             if params.imageorientation == 'XY' or params.imageorientation == 'ZY' or params.imageorientation == 'YZ' or params.imageorientation == 'YX':
                 self.IMag_ax = self.IMag_fig.add_subplot(111)
                 self.IMag_ax.grid(False)
@@ -5155,11 +6091,11 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                             self.x_major_ticks = np.arange(math.ceil(-self.FOV_1 / 2), math.floor(self.FOV_1 / 2) + 1, 1)
                             self.y_major_ticks = np.arange(math.ceil(self.FOV_2_start), math.floor(self.FOV_2_end) + 1, 1)
                         elif self.FOV_2 > 20 and self.FOV_2 <= 50:
-                            self.x_major_ticks = np.arange(math.ceil(-self.FOV_1 / 2), math.floor(self.FOV_1 / 2) + 1, 2)
-                            self.y_major_ticks = np.arange(math.ceil(self.FOV_2_start), math.floor(self.FOV_2_end) + 1, 2)
+                            self.x_major_ticks = np.arange(math.ceil(-self.FOV_1 / 2), math.floor(self.FOV_1 / 2) + 2, 2)
+                            self.y_major_ticks = np.arange(math.ceil(self.FOV_2_start), math.floor(self.FOV_2_end) + 2, 2)
                         else:
-                            self.x_major_ticks = np.arange(math.ceil(-self.FOV_1 / 2), math.floor(self.FOV_1 / 2) + 1, 4)
-                            self.y_major_ticks = np.arange(math.ceil(self.FOV_2_start), math.floor(self.FOV_2_end) + 1, 5)
+                            self.x_major_ticks = np.arange(math.ceil(-self.FOV_1 / 2), math.floor(self.FOV_1 / 2) + 4, 4)
+                            self.y_major_ticks = np.arange(math.ceil(self.FOV_2_start), math.floor(self.FOV_2_end) + 5, 5)
                         
                         self.IMag_ax.axis('on')
                         self.IMag_ax.set_xticks(self.x_major_ticks)
@@ -5178,11 +6114,11 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                             self.IMag_ax.set_ylabel('Y in mm')
                             self.IPha_ax.set_xlabel('X in mm')
                             self.IPha_ax.set_ylabel('Y in mm')
-                        elif params.imageorientation == 'YZ':
-                            self.IMag_ax.set_xlabel('Y in mm')
-                            self.IMag_ax.set_ylabel('Z in mm')
-                            self.IPha_ax.set_xlabel('Y in mm')
-                            self.IPha_ax.set_ylabel('Z in mm')
+                        elif params.imageorientation == 'ZY':
+                            self.IMag_ax.set_xlabel('Z in mm')
+                            self.IMag_ax.set_ylabel('Y in mm')
+                            self.IPha_ax.set_xlabel('Z in mm')
+                            self.IPha_ax.set_ylabel('Y in mm')
                         
                     else:
                         self.IMag_ax.axis('off')
@@ -5209,12 +6145,12 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                             self.x_major_ticks = np.arange(math.ceil(self.FOV_1_start), math.floor(self.FOV_1_end) + 1, 1)
                             self.y_major_ticks = np.arange(math.ceil(-self.FOV_2 / 2), math.floor(self.FOV_2 / 2) + 1, 1)
                         elif self.FOV_1 > 20 and self.FOV_1 <= 50:
-                            self.x_major_ticks = np.arange(math.ceil(self.FOV_1_start), math.floor(self.FOV_1_end) + 1, 2)
-                            self.y_major_ticks = np.arange(math.ceil(-self.FOV_2 / 2), math.floor(self.FOV_2 / 2) + 1, 2)
+                            self.x_major_ticks = np.arange(math.ceil(self.FOV_1_start), math.floor(self.FOV_1_end) + 2, 2)
+                            self.y_major_ticks = np.arange(math.ceil(-self.FOV_2 / 2), math.floor(self.FOV_2 / 2) + 2, 2)
                         else:
-                            self.x_major_ticks = np.arange(math.ceil(self.FOV_1_start), math.floor(self.FOV_1_end) + 1, 5)
-                            self.y_major_ticks = np.arange(math.ceil(-self.FOV_2 / 2), math.floor(self.FOV_2 / 2) + 1, 4)
-                        
+                            self.x_major_ticks = np.arange(math.ceil(self.FOV_1_start), math.floor(self.FOV_1_end) + 5, 5)
+                            self.y_major_ticks = np.arange(math.ceil(-self.FOV_2 / 2), math.floor(self.FOV_2 / 2) + 4, 4)
+                                            
                         self.IMag_ax.axis('on')
                         self.IMag_ax.set_xticks(self.x_major_ticks)
                         self.IMag_ax.set_yticks(self.y_major_ticks)
@@ -5229,14 +6165,14 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                         
                         if params.imageorientation == 'YX':
                             self.IMag_ax.set_xlabel('Y in mm')
+                            self.IMag_ax.set_ylabel('X in mm')
+                            self.IPha_ax.set_xlabel('Y in mm')
+                            self.IPha_ax.set_ylabel('X in mm')
+                        elif params.imageorientation == 'YZ':
+                            self.IMag_ax.set_xlabel('Y in mm')
                             self.IMag_ax.set_ylabel('Z in mm')
                             self.IPha_ax.set_xlabel('Y in mm')
                             self.IPha_ax.set_ylabel('Z in mm')
-                        elif params.imageorientation == 'ZY':
-                            self.IMag_ax.set_xlabel('Z in mm')
-                            self.IMag_ax.set_ylabel('Y in mm')
-                            self.IPha_ax.set_xlabel('Z in mm')
-                            self.IPha_ax.set_ylabel('Y in mm')
                         
                     else:
                         self.IMag_ax.axis('off')
@@ -5253,6 +6189,16 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                 else:
                     self.IMag_ax.set_title('Magnitude Image')
                     self.IPha_ax.set_title('Phase Image')
+                    
+                self.IMag_canvas.draw()
+                self.IMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                self.IMag_canvas.setGeometry(420, 40, 575, 470)
+                self.IPha_canvas.draw()
+                self.IPha_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                self.IPha_canvas.setGeometry(1005, 40, 575, 470)
+
+                self.IMag_canvas.show()
+                self.IPha_canvas.show()
                 
             elif params.imageorientation == 'ZX' or params.imageorientation == 'XZ':
                 self.image_positions = np.linspace(params.motor_start_position, params.motor_end_position, num=params.motor_image_count)
@@ -5261,25 +6207,47 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                     self.IMag_ax = self.IMag_fig.add_subplot(111, projection='3d')
                     self.IMag_ax.grid(False)
                     
-                    self.img_st_mag_cut = np.array(np.zeros((params.nPE, params.nPE)))
-                    
-                    X, Z = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
-                    Y = np.array(np.zeros((params.nPE, params.nPE)))
-                    
-                    for n in range(params.motor_image_count):
-                        self.img_st_mag_cut[:, :] = params.img_st_mag[:, n*params.nPE:(n+1)*params.nPE]
-                        self.img_st_mag_cut[self.img_st_mag_cut > params.imagemaximum] = params.imagemaximum
-                        self.img_st_mag_cut[self.img_st_mag_cut < params.imageminimum] = params.imageminimum
+                    if params.projection3D_quality == 1:
+                        self.img_st_mag_cut_1 = np.array(np.zeros((params.nPE, params.nPE)))
+                        self.img_st_mag_cut_2 = np.array(np.zeros((params.nPE, params.nPE)))
+                       
+                        X, Z = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
                         
-                        Y[:, :] = self.img_st_mag_cut[:, :]
-                        Y = (Y - params.imageminimum) / (params.imagemaximum - params.imageminimum)
+                        for n in range(params.motor_image_count):
+                            self.img_st_mag_cut_1[:, :] = params.img_st_mag[:, n*params.nPE:(n+1)*params.nPE]
+                            self.img_st_mag_cut_1[self.img_st_mag_cut_1 < params.imageminimum] = np.nan
+                            self.img_st_mag_cut_2[:, :] = params.img_st_mag[:, n*params.nPE:(n+1)*params.nPE]
+                            self.img_st_mag_cut_2[self.img_st_mag_cut_2 > params.imagemaximum] = params.imagemaximum
+                            self.img_st_mag_cut_2[self.img_st_mag_cut_2 < params.imageminimum] = params.imageminimum
+                            
+                            Y = np.full_like(X, self.image_positions[n])
+                            Y[np.isnan(self.img_st_mag_cut_1)] = np.nan
+                            Y = np.rot90(Y, 3)
+
+                            colors_1 = plt.get_cmap(params.imagecolormap)((np.rot90(self.img_st_mag_cut_2, 3) - params.imageminimum)/(params.imagemaximum - params.imageminimum))
+                            
+                            self.IMag_ax.plot_surface(Y, Z, X, rstride=1, cstride=1, facecolors=colors_1, antialiased=False, linewidth=0)
+                            
+                    else:
+                        self.img_st_mag_cut = np.array(np.zeros((params.nPE, params.nPE)))
                         
-                        colors_1 = np.linspace(0,1,num=11)
-                        colors_1[colors_1 < np.min(Y)] = np.nan
-                        colors_1[colors_1 > np.max(Y)] = np.nan
-                        colors_2 = plt.get_cmap(params.imagecolormap)(colors_1)
+                        X, Z = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
+                        Y = np.array(np.zeros((params.nPE, params.nPE)))
                         
-                        self.IMag_ax.contour(Y, Z, X, zdir='x', offset=self.image_positions[n], colors=colors_2)
+                        for n in range(params.motor_image_count):
+                            self.img_st_mag_cut[:, :] = params.img_st_mag[:, n*params.nPE:(n+1)*params.nPE]
+                            self.img_st_mag_cut[self.img_st_mag_cut > params.imagemaximum] = params.imagemaximum
+                            self.img_st_mag_cut[self.img_st_mag_cut < params.imageminimum] = params.imageminimum
+                            
+                            Y[:, :] = self.img_st_mag_cut[:, :]
+                            Y = (Y - params.imageminimum) / (params.imagemaximum - params.imageminimum)
+                            
+                            colors_1 = np.linspace(0,1,num=11)
+                            colors_1[colors_1 < np.min(Y)] = np.nan
+                            colors_1[colors_1 > np.max(Y)] = np.nan
+                            colors_2 = plt.get_cmap(params.imagecolormap)(colors_1)
+                            
+                            self.IMag_ax.contour(Y, Z, X, zdir='x', offset=self.image_positions[n], colors=colors_2)
                         
                     self.IMag_ax.set_box_aspect([(params.motor_total_image_length)/params.FOV, 1, 1])
                     self.IMag_ax.set_xlim([params.motor_start_position, params.motor_end_position])
@@ -5289,11 +6257,11 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                             self.x_major_ticks = np.arange(math.ceil(params.motor_start_position), math.floor(params.motor_end_position) + 1, 1)
                             self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 1, 1)
                         elif params.motor_total_image_length > 20 and params.motor_total_image_length <= 50:
-                            self.x_major_ticks = np.arange(math.ceil(params.motor_start_position), math.floor(params.motor_end_position) + 1, 2)
-                            self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 1, 2)
+                            self.x_major_ticks = np.arange(math.ceil(params.motor_start_position), math.floor(params.motor_end_position) + 2, 2)
+                            self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 2, 2)
                         else:
-                            self.x_major_ticks = np.arange(math.ceil(params.motor_start_position), math.floor(params.motor_end_position) + 1, 5)
-                            self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 1, 4)
+                            self.x_major_ticks = np.arange(math.ceil(params.motor_start_position), math.floor(params.motor_end_position) + 5, 5)
+                            self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 4, 4)
                         
                         self.IMag_ax.axis('on')
                         self.IMag_ax.set_xticks(self.x_major_ticks)
@@ -5309,51 +6277,12 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                     else:
                         self.IMag_ax.axis('off')
                         
-#                     self.IMag_ax = self.IMag_fig.add_subplot(111, projection='3d')
-#                     self.IMag_ax.grid(False)
-#                     self.IPha_ax = self.IPha_fig.add_subplot(111, projection='3d')
-#                     self.IPha_ax.grid(False)
-#                     
-#                     self.img_st_mag_cut_1 = np.array(np.zeros((params.nPE, params.nPE)))
-#                     self.img_st_mag_cut_2 = np.array(np.zeros((params.nPE, params.nPE)))
-#                     self.img_st_pha_cut = np.array(np.zeros((params.nPE, params.nPE)))
-#                    
-#                     X, Z = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
-#                     
-#                     for n in range(params.motor_image_count):
-#                         self.img_st_mag_cut_1[:, :] = params.img_st_mag[:, n*params.nPE:(n+1)*params.nPE]
-#                         self.img_st_mag_cut_1[self.img_st_mag_cut_1 < params.imageminimum] = np.nan
-#                         self.img_st_mag_cut_2[:, :] = params.img_st_mag[:, n*params.nPE:(n+1)*params.nPE]
-#                         self.img_st_mag_cut_2[self.img_st_mag_cut_2 > params.imagemaximum] = params.imagemaximum
-#                         self.img_st_mag_cut_2[self.img_st_mag_cut_2 < params.imageminimum] = params.imageminimum
-#                         self.img_st_pha_cut[:, :] = params.img_st_pha[:, n*params.nPE:(n+1)*params.nPE]
-#                         
-#                         Y = np.full_like(X, self.image_positions[n])
-#                         Y[np.isnan(self.img_st_mag_cut_1)] = np.nan
-#                         Y = np.rot90(Y, 3)
-# 
-#                         colors_1 = plt.get_cmap(params.imagecolormap)((np.rot90(self.img_st_mag_cut_2, 3) - params.imageminimum)/(params.imagemaximum - params.imageminimum))
-#                         colors_2 = plt.get_cmap('gray')(np.rot90(self.img_st_pha_cut, 3))
-#                         
-#                         self.IMag_ax.plot_surface(Y, Z, X, rstride=1, cstride=1, facecolors=colors_1, antialiased=False, linewidth=0)
-#                         self.IPha_ax.plot_surface(Y, Z, X, rstride=1, cstride=1, facecolors=colors_2, antialiased=False, linewidth=0)
-# 
-#                     self.IMag_ax.set_box_aspect([(params.motor_total_image_length)/params.FOV, 1, 1])
-#                     self.IMag_ax.set_xlim([params.motor_start_position, params.motor_end_position])
-#                     
-#                     self.IPha_ax.set_box_aspect([(params.motor_total_image_length)/params.FOV, 1, 1])
-#                     self.IPha_ax.set_xlim([params.motor_start_position, params.motor_end_position])
-#                     
-#                     if params.image_grid == 1:
-#                         self.IMag_ax.grid(True)
-#                         self.IPha_ax.grid(True)
-#                         if params.imageorientation == 'ZX':
-#                             self.IMag_ax.set(xlabel='Y',ylabel='Z', zlabel='X')
-#                         elif params.imageorientation == 'XZ':
-#                             self.IMag_ax.set(xlabel='Y',ylabel='X', zlabel='Z')
-#                     else:
-#                         self.IMag_ax.axis('off')
-#                         self.IPha_ax.axis('off')
+                    self.IMag_canvas.draw()
+                    self.IMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                    self.IMag_canvas.setGeometry(420, 40, 1160, 950)
+                
+                    self.IMag_canvas.show()
+                        
                 else:
                     if params.motor_image_count > 6:
                         gs_IMag = GridSpec(int(np.ceil(params.motor_image_count/6)), 6, figure=self.IMag_fig)
@@ -5470,22 +6399,15 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                                 self.IMag_ax.set_title('Magnitude Image')
                                 self.IPha_ax.set_title('Phase Image')
             
-            if params.projection3D == 1:
-                self.IMag_canvas.draw()
-                self.IMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
-                self.IMag_canvas.setGeometry(420, 40, 1160, 950)
-                
-                self.IMag_canvas.show()  
-            else:
-                self.IMag_canvas.draw()
-                self.IMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
-                self.IMag_canvas.setGeometry(420, 40, 575, 470)
-                self.IPha_canvas.draw()
-                self.IPha_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
-                self.IPha_canvas.setGeometry(1005, 40, 575, 470)
+                    self.IMag_canvas.draw()
+                    self.IMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                    self.IMag_canvas.setGeometry(420, 40, 575, 470)
+                    self.IPha_canvas.draw()
+                    self.IPha_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                    self.IPha_canvas.setGeometry(1005, 40, 575, 470)
 
-                self.IMag_canvas.show()
-                self.IPha_canvas.show()
+                    self.IMag_canvas.show()
+                    self.IPha_canvas.show()
 
         else:
             self.all_fig = Figure()
@@ -5524,11 +6446,11 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                         self.x_major_ticks = np.arange(math.ceil(-self.FOV_1 / 2), math.floor(self.FOV_1 / 2) + 1, 1)
                         self.y_major_ticks = np.arange(math.ceil(self.FOV_2_start), math.floor(self.FOV_2_end) + 1, 1)
                     elif self.FOV_2 > 20 and self.FOV_2 <= 50:
-                        self.x_major_ticks = np.arange(math.ceil(-self.FOV_1 / 2), math.floor(self.FOV_1 / 2) + 1, 2)
-                        self.y_major_ticks = np.arange(math.ceil(self.FOV_2_start), math.floor(self.FOV_2_end) + 1, 2)
+                        self.x_major_ticks = np.arange(math.ceil(-self.FOV_1 / 2), math.floor(self.FOV_1 / 2) + 2, 2)
+                        self.y_major_ticks = np.arange(math.ceil(self.FOV_2_start), math.floor(self.FOV_2_end) + 2, 2)
                     else:
-                        self.x_major_ticks = np.arange(math.ceil(-self.FOV_1 / 2), math.floor(self.FOV_1 / 2) + 1, 4)
-                        self.y_major_ticks = np.arange(math.ceil(self.FOV_2_start), math.floor(self.FOV_2_end) + 1, 5) 
+                        self.x_major_ticks = np.arange(math.ceil(-self.FOV_1 / 2), math.floor(self.FOV_1 / 2) + 4, 4)
+                        self.y_major_ticks = np.arange(math.ceil(self.FOV_2_start), math.floor(self.FOV_2_end) + 5, 5) 
                     
                     self.IMag_ax.axis('on')
                     self.IMag_ax.set_xticks(self.x_major_ticks)
@@ -5547,11 +6469,11 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                         self.IMag_ax.set_ylabel('Y in mm')
                         self.IMag_ax.set_xlabel('X in mm')
                         self.IMag_ax.set_ylabel('Y in mm')
-                    elif params.imageorientation == 'YX':
-                        self.IMag_ax.set_xlabel('Y in mm')
-                        self.IMag_ax.set_ylabel('Z in mm')
-                        self.IMag_ax.set_xlabel('Y in mm')
-                        self.IMag_ax.set_ylabel('Z in mm')
+                    elif params.imageorientation == 'ZY':
+                        self.IMag_ax.set_xlabel('Z in mm')
+                        self.IMag_ax.set_ylabel('Y in mm')
+                        self.IMag_ax.set_xlabel('Z in mm')
+                        self.IMag_ax.set_ylabel('Y in mm')
                         
                 else:
                     self.IMag_ax.axis('off')
@@ -5602,7 +6524,7 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                     self.IMag_ax.grid(which='major', visible=True)
                     
                     self.IPha_ax.axis('on')
-                    self.IPha_ax.set_xticks(self.x_major_ticks)
+                    self.IPha_ax.set_xticks(np.flip(self.x_major_ticks))
                     self.IPha_ax.set_yticks(self.y_major_ticks)
                     self.IPha_ax.grid(which='major', color='#CCCCCC', linestyle='-')
                     self.IPha_ax.grid(which='major', visible=True)
@@ -5612,11 +6534,11 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                         self.IMag_ax.set_ylabel('Z in mm')
                         self.IPha_ax.set_xlabel('Y in mm')
                         self.IPha_ax.set_ylabel('Z in mm')
-                    elif params.imageorientation == 'ZY':
-                        self.IMag_ax.set_xlabel('Z in mm')
-                        self.IMag_ax.set_ylabel('Y in mm')
-                        self.IPha_ax.set_xlabel('Z in mm')
-                        self.IPha_ax.set_ylabel('Y in mm')
+                    elif params.imageorientation == 'YX':
+                        self.IMag_ax.set_xlabel('Y in mm')
+                        self.IMag_ax.set_ylabel('X in mm')
+                        self.IPha_ax.set_xlabel('Y in mm')
+                        self.IPha_ax.set_ylabel('X in mm')
                         
                 else:
                     self.IMag_ax.axis('off')
@@ -5646,25 +6568,47 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                     self.IMag_ax = self.all_fig.add_subplot(111, projection='3d')
                     self.IMag_ax.grid(False)
                     
-                    self.img_st_mag_cut = np.array(np.zeros((params.nPE, params.nPE)))
-                    
-                    X, Z = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
-                    Y = np.array(np.zeros((params.nPE, params.nPE)))
-                    
-                    for n in range(params.motor_image_count):
-                        self.img_st_mag_cut[:, :] = params.img_st_mag[:, n*params.nPE:(n+1)*params.nPE]
-                        self.img_st_mag_cut[self.img_st_mag_cut > params.imagemaximum] = params.imagemaximum
-                        self.img_st_mag_cut[self.img_st_mag_cut < params.imageminimum] = params.imageminimum
+                    if params.projection3D_quality == 1:
+                        self.img_st_mag_cut_1 = np.array(np.zeros((params.nPE, params.nPE)))
+                        self.img_st_mag_cut_2 = np.array(np.zeros((params.nPE, params.nPE)))
+                       
+                        X, Z = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
                         
-                        Y[:, :] = self.img_st_mag_cut[:, :]
-                        Y = (Y - params.imageminimum) / (params.imagemaximum - params.imageminimum)
+                        for n in range(params.motor_image_count):
+                            self.img_st_mag_cut_1[:, :] = params.img_st_mag[:, n*params.nPE:(n+1)*params.nPE]
+                            self.img_st_mag_cut_1[self.img_st_mag_cut_1 < params.imageminimum] = np.nan
+                            self.img_st_mag_cut_2[:, :] = params.img_st_mag[:, n*params.nPE:(n+1)*params.nPE]
+                            self.img_st_mag_cut_2[self.img_st_mag_cut_2 > params.imagemaximum] = params.imagemaximum
+                            self.img_st_mag_cut_2[self.img_st_mag_cut_2 < params.imageminimum] = params.imageminimum
+                            
+                            Y = np.full_like(X, self.image_positions[n])
+                            Y[np.isnan(self.img_st_mag_cut_1)] = np.nan
+                            Y = np.rot90(Y, 3)
+
+                            colors_1 = plt.get_cmap(params.imagecolormap)((np.rot90(self.img_st_mag_cut_2, 3) - params.imageminimum)/(params.imagemaximum - params.imageminimum))
+                            
+                            self.IMag_ax.plot_surface(Y, Z, X, rstride=1, cstride=1, facecolors=colors_1, antialiased=False, linewidth=0)
+                            
+                    else:
+                        self.img_st_mag_cut = np.array(np.zeros((params.nPE, params.nPE)))
                         
-                        colors_1 = np.linspace(0,1,num=11)
-                        colors_1[colors_1 < np.min(Y)] = np.nan
-                        colors_1[colors_1 > np.max(Y)] = np.nan
-                        colors_2 = plt.get_cmap(params.imagecolormap)(colors_1)
+                        X, Z = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
+                        Y = np.array(np.zeros((params.nPE, params.nPE)))
                         
-                        self.IMag_ax.contour(Y, Z, X, zdir='x', offset=self.image_positions[n], colors=colors_2)
+                        for n in range(params.motor_image_count):
+                            self.img_st_mag_cut[:, :] = params.img_st_mag[:, n*params.nPE:(n+1)*params.nPE]
+                            self.img_st_mag_cut[self.img_st_mag_cut > params.imagemaximum] = params.imagemaximum
+                            self.img_st_mag_cut[self.img_st_mag_cut < params.imageminimum] = params.imageminimum
+                            
+                            Y[:, :] = self.img_st_mag_cut[:, :]
+                            Y = (Y - params.imageminimum) / (params.imagemaximum - params.imageminimum)
+                            
+                            colors_1 = np.linspace(0,1,num=11)
+                            colors_1[colors_1 < np.min(Y)] = np.nan
+                            colors_1[colors_1 > np.max(Y)] = np.nan
+                            colors_2 = plt.get_cmap(params.imagecolormap)(colors_1)
+                            
+                            self.IMag_ax.contour(Y, Z, X, zdir='x', offset=self.image_positions[n], colors=colors_2)
                         
                     self.IMag_ax.set_box_aspect([(params.motor_total_image_length)/params.FOV, 1, 1])
                     self.IMag_ax.set_xlim([params.motor_start_position, params.motor_end_position])
@@ -5674,11 +6618,11 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
                             self.x_major_ticks = np.arange(math.ceil(params.motor_start_position), math.floor(params.motor_end_position) + 1, 1)
                             self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 1, 1)
                         elif params.motor_total_image_length > 20 and params.motor_total_image_length <= 50:
-                            self.x_major_ticks = np.arange(math.ceil(params.motor_start_position), math.floor(params.motor_end_position) + 1, 2)
-                            self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 1, 2)
+                            self.x_major_ticks = np.arange(math.ceil(params.motor_start_position), math.floor(params.motor_end_position) + 2, 2)
+                            self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 2, 2)
                         else:
-                            self.x_major_ticks = np.arange(math.ceil(params.motor_start_position), math.floor(params.motor_end_position) + 1, 5)
-                            self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 1, 4)
+                            self.x_major_ticks = np.arange(math.ceil(params.motor_start_position), math.floor(params.motor_end_position) + 5, 5)
+                            self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 4, 4)
                         
                         self.IMag_ax.axis('on')
                         self.IMag_ax.set_xticks(self.x_major_ticks)
@@ -5860,8 +6804,8 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.all_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
             self.all_canvas.setGeometry(420, 40, 1160, 950)
             self.all_canvas.show()
-
-    def imaging_3D_plot_init(self):
+            
+    def imaging_stitching_single_plot_init(self):
         if params.imagplots == 1:
             self.IMag_fig = Figure()
             self.IMag_canvas = FigureCanvas(self.IMag_fig)
@@ -5869,221 +6813,612 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.IPha_fig = Figure()
             self.IPha_canvas = FigureCanvas(self.IPha_fig)
             self.IPha_fig.set_facecolor('None')
-            self.kMag_fig = Figure()
-            self.kMag_canvas = FigureCanvas(self.kMag_fig)
-            self.kMag_fig.set_facecolor('None')
-            self.kPha_fig = Figure()
-            self.kPha_canvas = FigureCanvas(self.kPha_fig)
-            self.kPha_fig.set_facecolor('None')
+
+            self.IMag_ax = self.IMag_fig.add_subplot(111)
+            self.IPha_ax = self.IPha_fig.add_subplot(111)
             
-            gs_IMag = GridSpec(1, params.img_mag.shape[0], figure=self.IMag_fig)
-            gs_IPha = GridSpec(1, params.img_mag.shape[0], figure=self.IPha_fig)
-            gs_kMag = GridSpec(1, params.img_mag.shape[0], figure=self.kMag_fig)
-            gs_kPha = GridSpec(1, params.img_mag.shape[0], figure=self.kPha_fig)
-            
-            for n in range(params.img_mag.shape[0]):
-                self.IMag_ax = self.IMag_fig.add_subplot(gs_IMag[0, n])
+            if params.imagefilter == 1: self.IMag_ax.imshow(params.img_st_mag[:, (params.image_stitching_slice-1)*params.nPE:params.image_stitching_slice*params.nPE], interpolation='gaussian', cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+            else: self.IMag_ax.imshow(params.img_st_mag[:, (params.image_stitching_slice-1)*params.nPE:params.image_stitching_slice*params.nPE], cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+            if params.imagefilter == 1: self.IPha_ax.imshow(params.img_st_pha[:, (params.image_stitching_slice-1)*params.nPE:params.image_stitching_slice*params.nPE], interpolation='gaussian', cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+            else: self.IPha_ax.imshow(params.img_st_pha[:, (params.image_stitching_slice-1)*params.nPE:params.image_stitching_slice*params.nPE], cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                                                           
+            if params.image_grid == 1:
+                self.major_ticks = np.arange(math.ceil((-params.FOV / 2)), math.floor((params.FOV / 2)) + 1, 1)
+                
+                self.IMag_ax.axis(True)
+                self.IMag_ax.set_xticks(self.major_ticks)
+                self.IMag_ax.set_yticks(self.major_ticks)
+                self.IMag_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                self.IMag_ax.grid(which='major', visible=True)
+                
+                self.IPha_ax.axis(True)
+                self.IPha_ax.set_xticks(self.major_ticks)
+                self.IPha_ax.set_yticks(self.major_ticks)
+                self.IPha_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                self.IPha_ax.grid(which='major', visible=True)
+                
+                if params.imageorientation == 'ZX':
+                    self.IMag_ax.set_xlabel('Z in mm')
+                    self.IMag_ax.set_ylabel('X in mm')
+                    self.IPha_ax.set_xlabel('Z in mm')
+                    self.IPha_ax.set_ylabel('X in mm')
+                elif params.imageorientation == 'XZ':
+                    self.IMag_ax.set_xlabel('X in mm')
+                    self.IMag_ax.set_ylabel('Z in mm')
+                    self.IPha_ax.set_xlabel('X in mm')
+                    self.IPha_ax.set_ylabel('Z in mm')
+                    
+            else:
+                self.IMag_ax.axis(False)
                 self.IMag_ax.grid(False)
-                self.IPha_ax = self.IPha_fig.add_subplot(gs_IPha[0, n])
+                self.IPha_ax.axis(False)
                 self.IPha_ax.grid(False)
-                self.kMag_ax = self.kMag_fig.add_subplot(gs_kMag[0, n])
-                self.kMag_ax.grid(False)
-                self.kPha_ax = self.kPha_fig.add_subplot(gs_kPha[0, n])
-                self.kPha_ax.grid(False)
                 
-                if params.imagefilter == 1: self.IMag_ax.imshow(params.img_mag[n, :, :], interpolation='gaussian', cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
-                else: self.IMag_ax.imshow(params.img_mag[n, :, :], cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
-                if params.imagefilter == 1: self.IPha_ax.imshow(params.img_pha[n, :, :], interpolation='gaussian', cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
-                else: self.IPha_ax.imshow(params.img_pha[n, :, :], cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+            self.image_positions = np.linspace(params.motor_start_position, params.motor_end_position, num=params.motor_image_count)
                     
-                if params.image_grid == 1:
-                    self.major_ticks = np.arange(math.ceil((-params.FOV / 2)), math.floor((params.FOV / 2)) + 1, 1)
-                    
-                    self.IMag_ax.axis('on')
-                    self.IMag_ax.set_xticks(self.major_ticks)
-                    self.IMag_ax.set_yticks(self.major_ticks)
-                    self.IMag_ax.grid(which='major', color='#CCCCCC', linestyle='-')
-                    self.IMag_ax.grid(which='major', visible=True)
-                    
-                    self.IPha_ax.axis('on')
-                    self.IPha_ax.set_xticks(self.major_ticks)
-                    self.IPha_ax.set_yticks(self.major_ticks)
-                    self.IPha_ax.grid(which='major', color='#CCCCCC', linestyle='-')
-                    self.IPha_ax.grid(which='major', visible=True)
-                    
-                    if params.imageorientation == 'XY':
-                        self.IMag_ax.set_xlabel('X in mm')
-                        self.IMag_ax.set_ylabel('Y in mm')
-                        self.IPha_ax.set_xlabel('X in mm')
-                        self.IPha_ax.set_ylabel('Y in mm')
-                    elif params.imageorientation == 'YZ':
-                        self.IMag_ax.set_xlabel('Y in mm')
-                        self.IMag_ax.set_ylabel('Z in mm')
-                        self.IPha_ax.set_xlabel('Y in mm')
-                        self.IPha_ax.set_ylabel('Z in mm')
-                    elif params.imageorientation == 'ZX':
-                        self.IMag_ax.set_xlabel('Z in mm')
-                        self.IMag_ax.set_ylabel('X in mm')
-                        self.IPha_ax.set_xlabel('Z in mm')
-                        self.IPha_ax.set_ylabel('X in mm')
-                    elif params.imageorientation == 'YX':
-                        self.IMag_ax.set_xlabel('Y in mm')
-                        self.IMag_ax.set_ylabel('Z in mm')
-                        self.IPha_ax.set_xlabel('Y in mm')
-                        self.IPha_ax.set_ylabel('Z in mm')
-                    elif params.imageorientation == 'ZY':
-                        self.IMag_ax.set_xlabel('Z in mm')
-                        self.IMag_ax.set_ylabel('Y in mm')
-                        self.IPha_ax.set_xlabel('Z in mm')
-                        self.IPha_ax.set_ylabel('Y in mm')
-                    elif params.imageorientation == 'XZ':
-                        self.IMag_ax.set_xlabel('X in mm')
-                        self.IMag_ax.set_ylabel('Z in mm')
-                        self.IPha_ax.set_xlabel('X in mm')
-                        self.IPha_ax.set_ylabel('Z in mm')
-                        
-                else:
-                    self.IMag_ax.axis('off')
-                    self.IPha_ax.axis('off')
-
-                self.image_positions = np.linspace(-params.slicethickness/(params.SPEsteps/2)+(params.slicethickness/params.SPEsteps)/2, +params.slicethickness/(params.SPEsteps/2)-(params.slicethickness/params.SPEsteps)/2, params.SPEsteps)
-
+            if params.sequence == 5 or params.sequence == 6 or params.sequence == 7 \
+                or params.sequence == 8 or params.sequence == 9:
                 if params.autofreqoffset == 1:
-                    self.IMag_ax.set_title('Magnitude Image @ ' + str(self.image_positions[n] + params.sliceoffset) + 'mm (' + str(params.slicethickness / params.SPEsteps) + 'mm)')
-                    self.IPha_ax.set_title('Phase Image @ ' + str(self.image_positions[n] + params.sliceoffset) + 'mm (' + str(params.slicethickness / params.SPEsteps) + 'mm)')
+                    self.IMag_ax.set_title('Magnitude Image @ ' + str(self.image_positions[params.image_stitching_slice-1] + params.sliceoffset) + 'mm (' + str(params.slicethickness) + 'mm)')
+                    self.IPha_ax.set_title('Phase Image @ ' + str(self.image_positions[params.image_stitching_slice-1] + params.sliceoffset) + 'mm (' + str(params.slicethickness) + 'mm)')
                 else:
-                    self.IMag_ax.set_title('Magnitude Image @ Offset' + str(params.slicethickness / params.SPEsteps) + 'mm)')
-                    self.IPha_ax.set_title('Phase Image @ Offset' + str(params.slicethickness / params.SPEsteps) + 'mm)')
-                    
-                if params.lnkspacemag == 1:
-                    self.kMag_ax.imshow(np.log(params.k_amp[n, :, :]), cmap='inferno')
-                    self.kMag_ax.set_title('ln(k-Space Magnitude) ' + str(n+1))
-                else:
-                    self.kMag_ax.imshow(params.k_amp[n, :, :], cmap='inferno')
-                    self.kMag_ax.set_title('k-Space Magnitude ' + str(n+1))
-                    
-                self.kMag_ax.axis('off')
-                self.kMag_ax.set_aspect(1.0 / self.kMag_ax.get_data_ratio())
-                
-                self.kPha_ax.imshow(params.k_pha[n, :, :], cmap='inferno')
-                self.kPha_ax.axis('off')
-                self.kPha_ax.set_aspect(1.0 / self.kPha_ax.get_data_ratio())
-                self.kPha_ax.set_title('k-Space Phase ' + str(n+1))
-                
+                    self.IMag_ax.set_title('Magnitude Image @ Offset' + str(params.slicethickness) + 'mm)')
+                    self.IPha_ax.set_title('Phase Image @ Offset' + str(params.slicethickness) + 'mm)')
+            else:
+                self.IMag_ax.set_title('Magnitude Image')
+                self.IPha_ax.set_title('Phase Image')
+
             self.IMag_canvas.draw()
             self.IMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
             self.IMag_canvas.setGeometry(420, 40, 575, 455)
             self.IPha_canvas.draw()
             self.IPha_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
             self.IPha_canvas.setGeometry(1005, 40, 575, 455)
-            self.kMag_canvas.draw()
-            self.kMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
-            self.kMag_canvas.setGeometry(420, 535, 575, 455)
-            self.kPha_canvas.draw()
-            self.kPha_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
-            self.kPha_canvas.setGeometry(1005, 535, 575, 455)
-
             self.IMag_canvas.show()
             self.IPha_canvas.show()
-            self.kMag_canvas.show()
-            self.kPha_canvas.show()
+            
+        else:
+            self.all_fig = Figure()
+            self.all_canvas = FigureCanvas(self.all_fig)
+            self.all_fig.set_facecolor('None')
+
+            #gs = GridSpec(2, 2, figure=self.all_fig)
+            self.IMag_ax = self.all_fig.add_subplot(121)
+            self.IMag_ax.grid(False)
+            self.IPha_ax = self.all_fig.add_subplot(122)
+            self.IPha_ax.grid(False)
+            
+            if params.imagefilter == 1: self.IMag_ax.imshow(params.img_st_mag[:, (params.image_stitching_slice-1)*params.nPE:params.image_stitching_slice*params.nPE], interpolation='gaussian', cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+            else: self.IMag_ax.imshow(params.img_st_mag[:, (params.image_stitching_slice-1)*params.nPE:params.image_stitching_slice*params.nPE], cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+            if params.imagefilter == 1: self.IPha_ax.imshow(params.img_st_pha[:, (params.image_stitching_slice-1)*params.nPE:params.image_stitching_slice*params.nPE], interpolation='gaussian', cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+            else: self.IPha_ax.imshow(params.img_st_pha[:, (params.image_stitching_slice-1)*params.nPE:params.image_stitching_slice*params.nPE], cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                        
+            if params.image_grid == 1:
+                self.major_ticks = np.linspace(math.ceil((-params.FOV / 2)), math.floor((params.FOV / 2)), math.floor((params.FOV / 2)) - math.ceil((-params.FOV / 2)) + 1)
+                
+                self.IMag_ax.axis(True)
+                self.IMag_ax.set_xticks(self.major_ticks)
+                self.IMag_ax.set_yticks(self.major_ticks)
+                self.IMag_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                self.IMag_ax.grid(which='major', visible=True)
+                
+                self.IPha_ax.axis(True)
+                self.IPha_ax.set_xticks(self.major_ticks)
+                self.IPha_ax.set_yticks(self.major_ticks)
+                self.IPha_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                self.IPha_ax.grid(which='major', visible=True)
+                
+                if params.imageorientation == 'ZX':
+                    self.IMag_ax.set_xlabel('Z in mm')
+                    self.IMag_ax.set_ylabel('X in mm')
+                    self.IPha_ax.set_xlabel('Z in mm')
+                    self.IPha_ax.set_ylabel('X in mm')
+                elif params.imageorientation == 'XZ':
+                    self.IMag_ax.set_xlabel('X in mm')
+                    self.IMag_ax.set_ylabel('Z in mm')
+                    self.IPha_ax.set_xlabel('X in mm')
+                    self.IPha_ax.set_ylabel('Z in mm')
+                
+            else:
+                self.IMag_ax.axis(False)
+                self.IPha_ax.axis(False)
+            
+            self.image_positions = np.linspace(params.motor_start_position, params.motor_end_position, num=params.motor_image_count)
+                    
+            if params.sequence == 5 or params.sequence == 6 or params.sequence == 7 \
+                or params.sequence == 8 or params.sequence == 9:
+                if params.autofreqoffset == 1:
+                    self.IMag_ax.set_title('Magnitude Image @ ' + str(self.image_positions[params.image_stitching_slice-1] + params.sliceoffset) + 'mm (' + str(params.slicethickness) + 'mm)')
+                    self.IPha_ax.set_title('Phase Image @ ' + str(self.image_positions[params.image_stitching_slice-1] + params.sliceoffset) + 'mm (' + str(params.slicethickness) + 'mm)')
+                else:
+                    self.IMag_ax.set_title('Magnitude Image @ Offset' + str(params.slicethickness) + 'mm)')
+                    self.IPha_ax.set_title('Phase Image @ Offset' + str(params.slicethickness) + 'mm)')
+            else:
+                self.IMag_ax.set_title('Magnitude Image')
+                self.IPha_ax.set_title('Phase Image')
+
+            self.all_canvas.draw()
+            self.all_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+            self.all_canvas.setGeometry(420, 40, 1160, 950)
+            self.all_canvas.show()
+
+    def imaging_3D_plot_init(self):
+        self.image_positions = np.linspace(-params.slicethickness/2 + (params.slicethickness/params.SPEsteps)/2, params.slicethickness/2 - (params.slicethickness/params.SPEsteps)/2, params.SPEsteps)
+        
+        if params.imagplots == 1:
+            
+            if params.projection3D == 1:
+                self.IMag_fig = Figure()
+                self.IMag_canvas = FigureCanvas(self.IMag_fig)
+                self.IMag_fig.set_facecolor('None')
+                self.IPha_fig = Figure()
+                self.IPha_canvas = FigureCanvas(self.IPha_fig)
+                self.IPha_fig.set_facecolor('None')
+                self.kMag_fig = Figure()
+                self.kMag_canvas = FigureCanvas(self.kMag_fig)
+                self.kMag_fig.set_facecolor('None')
+                self.kPha_fig = Figure()
+                self.kPha_canvas = FigureCanvas(self.kPha_fig)
+                self.kPha_fig.set_facecolor('None')
+                
+                self.IMag_ax = self.IMag_fig.add_subplot(111, projection='3d')
+                self.IMag_ax.grid(False)
+                self.IPha_ax = self.IPha_fig.add_subplot(111, projection='3d')
+                self.IPha_ax.grid(False)
+                self.kMag_ax = self.kMag_fig.add_subplot(111, projection='3d')
+                self.kMag_ax.grid(False)
+                self.kPha_ax = self.kPha_fig.add_subplot(111, projection='3d')
+                self.kPha_ax.grid(False) 
+                
+                if params.projection3D_quality == 1:
+                    self.img_mag_cut_1 = np.array(np.zeros((params.nPE, params.nPE)))
+                    self.img_mag_cut_2 = np.array(np.zeros((params.nPE, params.nPE)))
+                    self.img_pha_cut = np.array(np.zeros((params.nPE, params.nPE)))
+                    self.img_kmag_cut = np.array(np.zeros((params.k_amp.shape[1], params.k_amp.shape[2])))
+                    self.img_kpha_cut = np.array(np.zeros((params.k_amp.shape[1], params.k_amp.shape[2])))
+                   
+                    X1, Z1 = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
+                    X2, Z2 = np.meshgrid(np.linspace(0, params.k_amp.shape[1], params.k_amp.shape[1]),np.linspace(0, params.k_amp.shape[2], params.k_amp.shape[2]))
+                    
+                    print(X2.shape)
+                    print(Z2.shape)
+                    
+                    for n in range(params.img_mag.shape[0]):
+                        self.img_mag_cut_1[:, :] = params.img_mag[n, :, :]
+                        self.img_mag_cut_1[self.img_mag_cut_1 < params.imageminimum] = np.nan
+                        self.img_mag_cut_2[:, :] = params.img_mag[n, :, :]
+                        self.img_mag_cut_2[self.img_mag_cut_2 > params.imagemaximum] = params.imagemaximum
+                        self.img_mag_cut_2[self.img_mag_cut_2 < params.imageminimum] = params.imageminimum
+                        self.img_pha_cut[:, :] = params.img_pha[n, :, :]
+                        self.img_pha_cut[self.img_mag_cut_1 < params.imageminimum] = np.nan
+                        self.img_kmag_cut[:, :] = params.k_amp[n, :, :]
+                        self.img_kpha_cut[:, :] = params.k_pha[n, :, :]
+                        
+                        Y1 = np.full_like(X1, self.image_positions[n])
+                        Y1[np.isnan(self.img_mag_cut_1)] = np.nan
+                        Y1 = np.rot90(Y1, 3)
+                        
+                        Y2 = np.full_like(X2, n+1)
+                        #Y2 = np.rot90(Y2, 3)
+                        
+                        print(Y2.shape)
+
+                        colors_1 = plt.get_cmap(params.imagecolormap)((np.rot90(self.img_mag_cut_2, 3) - params.imageminimum)/(params.imagemaximum - params.imageminimum))
+                        colors_2 = plt.get_cmap('gray')((np.rot90(self.img_pha_cut, 3) - np.min(params.img_pha))/(np.max(params.img_pha) - np.min(params.img_pha)))
+                        colors_3 = plt.get_cmap('inferno')((np.rot90(self.img_kmag_cut, 3) - np.min(params.k_amp))/(np.max(params.k_amp) - np.min(params.k_amp)))
+                        colors_4 = plt.get_cmap('inferno')((np.rot90(self.img_kpha_cut, 3) - np.min(params.k_pha))/(np.max(params.k_pha) - np.min(params.k_pha)))
+                        
+                        print(colors_3.shape)
+                        
+                        self.IMag_ax.plot_surface(Y1, Z1, X1, rstride=1, cstride=1, facecolors=colors_1, antialiased=False, linewidth=0)
+                        self.IPha_ax.plot_surface(Y1, Z1, X1, rstride=1, cstride=1, facecolors=colors_2, antialiased=False, linewidth=0)
+                        self.kMag_ax.plot_surface(Y2, Z2, X2, rcount=params.nPE, ccount=params.nPE, facecolors=colors_3, antialiased=False, linewidth=0)
+                        self.kPha_ax.plot_surface(Y2, Z2, X2, rcount=params.nPE, ccount=params.nPE, facecolors=colors_4, antialiased=False, linewidth=0)
+                        
+                else:
+                    self.img_mag_cut = np.array(np.zeros((params.nPE, params.nPE)))
+                    self.img_pha_cut = np.array(np.zeros((params.nPE, params.nPE)))
+                    
+                    X, Z = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
+                    Y1 = np.array(np.zeros((params.nPE, params.nPE)))
+                    Y2 = np.array(np.zeros((params.nPE, params.nPE)))
+                    
+                    for n in range(params.img_mag.shape[0]):
+                        self.img_mag_cut[:, :] = params.img_mag[n, :, :]
+                        self.img_mag_cut[self.img_mag_cut > params.imagemaximum] = params.imagemaximum
+                        self.img_mag_cut[self.img_mag_cut < params.imageminimum] = params.imageminimum
+                        self.img_pha_cut[:, :] = params.img_pha[n, :, :]
+                        
+                        Y1[:, :] = self.img_mag_cut[:, :]
+                        Y1 = (Y1 - params.imageminimum) / (params.imagemaximum - params.imageminimum)
+                        Y2[:, :] = self.img_pha_cut[:, :]
+                        Y2 = (Y2 - np.min(params.img_pha)) / (np.max(params.img_pha) - np.min(params.img_pha))
+                        
+                        colors_1 = np.linspace(0,1,num=11)
+                        colors_1[colors_1 < np.min(Y1)] = np.nan
+                        colors_1[colors_1 > np.max(Y1)] = np.nan
+                        colors_2 = plt.get_cmap(params.imagecolormap)(colors_1)
+                        colors_3 = np.linspace(0,1,num=11)
+                        colors_4 = plt.get_cmap('gray')(colors_3)
+                        
+                        self.IMag_ax.contour(Y1, Z, X, zdir='x', offset=self.image_positions[n], colors=colors_2)
+                        self.IPha_ax.contour(Y2, Z, X, zdir='x', offset=self.image_positions[n], colors=colors_4)
+                    
+                self.IMag_ax.set_box_aspect([params.slicethickness/params.FOV, 1, 1])
+                self.IMag_ax.set_xlim([(-params.slicethickness/2), (params.slicethickness/2)])
+                self.IPha_ax.set_box_aspect([params.slicethickness/params.FOV, 1, 1])
+                self.IPha_ax.set_xlim([(-params.slicethickness/2), (params.slicethickness/2)])
+                self.kMag_ax.set_box_aspect([params.slicethickness/params.FOV, 1, 1])
+                self.kMag_ax.set_xlim([1, (params.img_mag.shape[0]+1)])
+                self.kPha_ax.set_box_aspect([params.slicethickness/params.FOV, 1, 1])
+                self.kPha_ax.set_xlim([1, (params.img_mag.shape[0]+1)])
+                
+                if params.image_grid == 1:
+                    self.x_major_ticks = self.image_positions
+                    if params.FOV <= 10: self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 1, 1)
+                    elif params.FOV > 10 and params.FOV <= 20: self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 2, 2)
+                    else: self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 4, 4)
+                    
+                    self.IMag_ax.axis('on')
+                    self.IMag_ax.set_xticks(self.x_major_ticks)
+                    self.IMag_ax.set_yticks(self.y_major_ticks)
+                    self.IMag_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                    self.IMag_ax.grid(which='major', visible=True)
+                    self.IMag_ax.grid(True)
+                    self.IPha_ax.axis('on')
+                    self.IPha_ax.set_xticks(self.x_major_ticks)
+                    self.IPha_ax.set_yticks(self.y_major_ticks)
+                    self.IPha_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                    self.IPha_ax.grid(which='major', visible=True)
+                    self.IPha_ax.grid(True)
+                    self.kMag_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                    self.kMag_ax.grid(which='major', visible=True)
+                    self.kMag_ax.grid(True)
+                    self.kPha_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                    self.kPha_ax.grid(which='major', visible=True)
+                    self.kPha_ax.grid(True)
+                    
+                    if params.imageorientation == 'XY':
+                        self.IMag_ax.set(xlabel='Z',ylabel='X', zlabel='Y')
+                        self.IPha_ax.set(xlabel='Z',ylabel='X', zlabel='Y')
+                    elif params.imageorientation == 'YX':
+                        self.IMag_ax.set(xlabel='Z',ylabel='Y', zlabel='X')
+                        self.IPha_ax.set(xlabel='Z',ylabel='Y', zlabel='X')
+                    elif params.imageorientation == 'YZ':
+                        self.IMag_ax.set(xlabel='X',ylabel='Y', zlabel='Z')
+                        self.IPha_ax.set(xlabel='X',ylabel='Y', zlabel='Z')
+                    elif params.imageorientation == 'ZY':
+                        self.IMag_ax.set(xlabel='X',ylabel='Z', zlabel='Y')
+                        self.IPha_ax.set(xlabel='X',ylabel='Z', zlabel='Y')
+                    elif params.imageorientation == 'ZX':
+                        self.IMag_ax.set(xlabel='Y',ylabel='Z', zlabel='X')
+                        self.IPha_ax.set(xlabel='Y',ylabel='Z', zlabel='X')
+                    elif params.imageorientation == 'XZ':
+                        self.IMag_ax.set(xlabel='Y',ylabel='X', zlabel='Z')
+                        self.IPha_ax.set(xlabel='Y',ylabel='X', zlabel='Z')
+                    
+                    self.kMag_ax.set(xlabel='3D Phase Encoding Step',ylabel='Sample', zlabel='Phase Encoding Step')
+                    self.kPha_ax.set(xlabel='3D Phase Encoding Step',ylabel='Sample', zlabel='Phase Encoding Step')
+                    
+                else:
+                    self.IMag_ax.axis('off')
+                    self.IPha_ax.axis('off')
+                    self.kMag_ax.axis('off')
+                    self.kPha_ax.axis('off')
+                    
+                self.IMag_canvas.draw()
+                self.IMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                self.IMag_canvas.setGeometry(420, 40, 575, 455)
+                self.IMag_canvas.show()
+                self.IPha_canvas.draw()
+                self.IPha_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                self.IPha_canvas.setGeometry(1005, 40, 575, 455)
+                self.IPha_canvas.show()
+                self.kMag_canvas.draw()
+                self.kMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                self.kMag_canvas.setGeometry(420, 535, 575, 455)
+                self.kMag_canvas.show()
+                self.kPha_canvas.draw()
+                self.kPha_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                self.kPha_canvas.setGeometry(1005, 535, 575, 455)
+                self.kPha_canvas.show()
+                    
+            else:
+                self.IMag_fig = Figure()
+                self.IMag_canvas = FigureCanvas(self.IMag_fig)
+                self.IMag_fig.set_facecolor('None')
+                self.IPha_fig = Figure()
+                self.IPha_canvas = FigureCanvas(self.IPha_fig)
+                self.IPha_fig.set_facecolor('None')
+                self.kMag_fig = Figure()
+                self.kMag_canvas = FigureCanvas(self.kMag_fig)
+                self.kMag_fig.set_facecolor('None')
+                self.kPha_fig = Figure()
+                self.kPha_canvas = FigureCanvas(self.kPha_fig)
+                self.kPha_fig.set_facecolor('None')
+                
+                gs_IMag = GridSpec(1, params.img_mag.shape[0], figure=self.IMag_fig)
+                gs_IPha = GridSpec(1, params.img_mag.shape[0], figure=self.IPha_fig)
+                gs_kMag = GridSpec(1, params.img_mag.shape[0], figure=self.kMag_fig)
+                gs_kPha = GridSpec(1, params.img_mag.shape[0], figure=self.kPha_fig)
+                
+                for n in range(params.img_mag.shape[0]):
+                    self.IMag_ax = self.IMag_fig.add_subplot(gs_IMag[0, n])
+                    self.IMag_ax.grid(False)
+                    self.IPha_ax = self.IPha_fig.add_subplot(gs_IPha[0, n])
+                    self.IPha_ax.grid(False)
+                    self.kMag_ax = self.kMag_fig.add_subplot(gs_kMag[0, n])
+                    self.kMag_ax.grid(False)
+                    self.kPha_ax = self.kPha_fig.add_subplot(gs_kPha[0, n])
+                    self.kPha_ax.grid(False)
+                    
+                    if params.imagefilter == 1: self.IMag_ax.imshow(params.img_mag[n, :, :], interpolation='gaussian', cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                    else: self.IMag_ax.imshow(params.img_mag[n, :, :], cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                    if params.imagefilter == 1: self.IPha_ax.imshow(params.img_pha[n, :, :], interpolation='gaussian', cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                    else: self.IPha_ax.imshow(params.img_pha[n, :, :], cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                        
+                    if params.image_grid == 1:
+                        self.major_ticks = np.arange(math.ceil((-params.FOV / 2)), math.floor((params.FOV / 2)) + 1, 1)
+                        
+                        self.IMag_ax.axis('on')
+                        self.IMag_ax.set_xticks(self.major_ticks)
+                        self.IMag_ax.set_yticks(self.major_ticks)
+                        self.IMag_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                        self.IMag_ax.grid(which='major', visible=True)
+                        
+                        self.IPha_ax.axis('on')
+                        self.IPha_ax.set_xticks(self.major_ticks)
+                        self.IPha_ax.set_yticks(self.major_ticks)
+                        self.IPha_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                        self.IPha_ax.grid(which='major', visible=True)
+                        
+                        if params.imageorientation == 'XY':
+                            self.IMag_ax.set_xlabel('X in mm')
+                            self.IMag_ax.set_ylabel('Y in mm')
+                            self.IPha_ax.set_xlabel('X in mm')
+                            self.IPha_ax.set_ylabel('Y in mm')
+                        elif params.imageorientation == 'YZ':
+                            self.IMag_ax.set_xlabel('Y in mm')
+                            self.IMag_ax.set_ylabel('Z in mm')
+                            self.IPha_ax.set_xlabel('Y in mm')
+                            self.IPha_ax.set_ylabel('Z in mm')
+                        elif params.imageorientation == 'ZX':
+                            self.IMag_ax.set_xlabel('Z in mm')
+                            self.IMag_ax.set_ylabel('X in mm')
+                            self.IPha_ax.set_xlabel('Z in mm')
+                            self.IPha_ax.set_ylabel('X in mm')
+                        elif params.imageorientation == 'YX':
+                            self.IMag_ax.set_xlabel('Y in mm')
+                            self.IMag_ax.set_ylabel('Z in mm')
+                            self.IPha_ax.set_xlabel('Y in mm')
+                            self.IPha_ax.set_ylabel('Z in mm')
+                        elif params.imageorientation == 'ZY':
+                            self.IMag_ax.set_xlabel('Z in mm')
+                            self.IMag_ax.set_ylabel('Y in mm')
+                            self.IPha_ax.set_xlabel('Z in mm')
+                            self.IPha_ax.set_ylabel('Y in mm')
+                        elif params.imageorientation == 'XZ':
+                            self.IMag_ax.set_xlabel('X in mm')
+                            self.IMag_ax.set_ylabel('Z in mm')
+                            self.IPha_ax.set_xlabel('X in mm')
+                            self.IPha_ax.set_ylabel('Z in mm')
+                            
+                    else:
+                        self.IMag_ax.axis('off')
+                        self.IPha_ax.axis('off')
+
+                    if params.autofreqoffset == 1:
+                        self.IMag_ax.set_title('Magnitude Image @ ' + str(self.image_positions[n] + params.sliceoffset) + 'mm (' + str(params.slicethickness / params.SPEsteps) + 'mm)')
+                        self.IPha_ax.set_title('Phase Image @ ' + str(self.image_positions[n] + params.sliceoffset) + 'mm (' + str(params.slicethickness / params.SPEsteps) + 'mm)')
+                    else:
+                        self.IMag_ax.set_title('Magnitude Image @ Offset' + str(params.slicethickness / params.SPEsteps) + 'mm)')
+                        self.IPha_ax.set_title('Phase Image @ Offset' + str(params.slicethickness / params.SPEsteps) + 'mm)')
+                        
+                    if params.lnkspacemag == 1:
+                        self.kMag_ax.imshow(np.log(params.k_amp[n, :, :]), cmap='inferno', vmin=np.min(np.log(params.k_amp)), vmax=np.max(np.log(params.k_amp)))
+                        self.kMag_ax.set_title('ln(k-Space Magnitude) ' + str(n+1))
+                    else:
+                        self.kMag_ax.imshow(params.k_amp[n, :, :], cmap='inferno', vmin=np.min(params.k_amp), vmax=np.max(params.k_amp))
+                        self.kMag_ax.set_title('k-Space Magnitude ' + str(n+1))
+                        
+                    self.kMag_ax.axis('off')
+                    self.kMag_ax.set_aspect(1.0 / self.kMag_ax.get_data_ratio())
+                    
+                    self.kPha_ax.imshow(params.k_pha[n, :, :], cmap='inferno')
+                    self.kPha_ax.axis('off')
+                    self.kPha_ax.set_aspect(1.0 / self.kPha_ax.get_data_ratio())
+                    self.kPha_ax.set_title('k-Space Phase ' + str(n+1))
+                    
+                self.IMag_canvas.draw()
+                self.IMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                self.IMag_canvas.setGeometry(420, 40, 575, 455)
+                self.IMag_canvas.show()
+                self.IPha_canvas.draw()
+                self.IPha_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                self.IPha_canvas.setGeometry(1005, 40, 575, 455)
+                self.IPha_canvas.show()
+                self.kMag_canvas.draw()
+                self.kMag_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                self.kMag_canvas.setGeometry(420, 535, 575, 455)
+                self.kMag_canvas.show()
+                self.kPha_canvas.draw()
+                self.kPha_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
+                self.kPha_canvas.setGeometry(1005, 535, 575, 455)
+                self.kPha_canvas.show()
         
         else:
             self.all_fig = Figure()
             self.all_canvas = FigureCanvas(self.all_fig)
             self.all_fig.set_facecolor('None')
             
-            gs = GridSpec(4, params.img_mag.shape[0], figure=self.all_fig)
-            
-            for n in range(params.img_mag.shape[0]):
-                self.IMag_ax = self.all_fig.add_subplot(gs[0, n])
+            if params.projection3D == 1:
+                self.IMag_ax = self.all_fig.add_subplot(111, projection='3d')
                 self.IMag_ax.grid(False)
-                self.IPha_ax = self.all_fig.add_subplot(gs[1, n])
-                self.IPha_ax.grid(False)
-                self.kMag_ax = self.all_fig.add_subplot(gs[2, n])
-                self.kMag_ax.grid(False)
-                self.kPha_ax = self.all_fig.add_subplot(gs[3, n])
-                self.kPha_ax.grid(False)
                 
-                if params.imagefilter == 1: self.IMag_ax.imshow(params.img_mag[n, :, :], interpolation='gaussian', cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
-                else: self.IMag_ax.imshow(params.img_mag[n, :, :], cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
-                if params.imagefilter == 1: self.IPha_ax.imshow(params.img_pha[n, :, :], interpolation='gaussian', cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
-                else: self.IPha_ax.imshow(params.img_pha[n, :, :], cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                if params.projection3D_quality == 1:
+                    self.img_mag_cut_1 = np.array(np.zeros((params.nPE, params.nPE)))
+                    self.img_mag_cut_2 = np.array(np.zeros((params.nPE, params.nPE)))
+                   
+                    X, Z = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
                     
-                
-                if params.image_grid == 1:
-                    self.major_ticks = np.arange(math.ceil((-params.FOV / 2)), math.floor((params.FOV / 2)) + 1, 1)
-                    
-                    self.IMag_ax.axis('on')
-                    self.IMag_ax.set_xticks(self.major_ticks)
-                    self.IMag_ax.set_yticks(self.major_ticks)
-                    self.IMag_ax.grid(which='major', color='#CCCCCC', linestyle='-')
-                    self.IMag_ax.grid(which='major', visible=True)
-                    
-                    self.IPha_ax.axis('on')
-                    self.IPha_ax.set_xticks(self.major_ticks)
-                    self.IPha_ax.set_yticks(self.major_ticks)
-                    self.IPha_ax.grid(which='major', color='#CCCCCC', linestyle='-')
-                    self.IPha_ax.grid(which='major', visible=True)
-                    
-                    if params.imageorientation == 'XY':
-                        self.IMag_ax.set_xlabel('X in mm')
-                        self.IMag_ax.set_ylabel('Y in mm')
-                        self.IPha_ax.set_xlabel('X in mm')
-                        self.IPha_ax.set_ylabel('Y in mm')
-                    elif params.imageorientation == 'YZ':
-                        self.IMag_ax.set_xlabel('Y in mm')
-                        self.IMag_ax.set_ylabel('Z in mm')
-                        self.IPha_ax.set_xlabel('Y in mm')
-                        self.IPha_ax.set_ylabel('Z in mm')
-                    elif params.imageorientation == 'ZX':
-                        self.IMag_ax.set_xlabel('Z in mm')
-                        self.IMag_ax.set_ylabel('X in mm')
-                        self.IPha_ax.set_xlabel('Z in mm')
-                        self.IPha_ax.set_ylabel('X in mm')
-                    elif params.imageorientation == 'YX':
-                        self.IMag_ax.set_xlabel('Y in mm')
-                        self.IMag_ax.set_ylabel('Z in mm')
-                        self.IPha_ax.set_xlabel('Y in mm')
-                        self.IPha_ax.set_ylabel('Z in mm')
-                    elif params.imageorientation == 'ZY':
-                        self.IMag_ax.set_xlabel('Z in mm')
-                        self.IMag_ax.set_ylabel('Y in mm')
-                        self.IPha_ax.set_xlabel('Z in mm')
-                        self.IPha_ax.set_ylabel('Y in mm')
-                    elif params.imageorientation == 'XZ':
-                        self.IMag_ax.set_xlabel('X in mm')
-                        self.IMag_ax.set_ylabel('Z in mm')
-                        self.IPha_ax.set_xlabel('X in mm')
-                        self.IPha_ax.set_ylabel('Z in mm')
+                    for n in range(params.img_mag.shape[0]):
+                        self.img_mag_cut_1[:, :] = params.img_mag[n, :, :]
+                        self.img_mag_cut_1[self.img_mag_cut_1 < params.imageminimum] = np.nan
+                        self.img_mag_cut_2[:, :] = params.img_mag[n, :, :]
+                        self.img_mag_cut_2[self.img_mag_cut_2 > params.imagemaximum] = params.imagemaximum
+                        self.img_mag_cut_2[self.img_mag_cut_2 < params.imageminimum] = params.imageminimum
+                        
+                        Y = np.full_like(X, self.image_positions[n])
+                        Y[np.isnan(self.img_mag_cut_1)] = np.nan
+                        Y = np.rot90(Y, 3)
+
+                        colors_1 = plt.get_cmap(params.imagecolormap)((np.rot90(self.img_mag_cut_2, 3) - params.imageminimum)/(params.imagemaximum - params.imageminimum))
+                        
+                        self.IMag_ax.plot_surface(Y, Z, X, rstride=1, cstride=1, facecolors=colors_1, antialiased=False, linewidth=0)
                         
                 else:
-                    self.IMag_ax.axis('off')
-                    self.IPha_ax.axis('off')
-
-                self.image_positions = np.linspace(-params.slicethickness/(params.SPEsteps/2)+(params.slicethickness/params.SPEsteps)/2, +params.slicethickness/(params.SPEsteps/2)-(params.slicethickness/params.SPEsteps)/2, params.SPEsteps)
-                
-                if params.autofreqoffset == 1:
-                    self.IMag_ax.set_title('Magnitude Image @ ' + str(self.image_positions[n] + params.sliceoffset) + 'mm (' + str(params.slicethickness / params.SPEsteps) + 'mm)')
-                    self.IPha_ax.set_title('Phase Image @ ' + str(self.image_positions[n] + params.sliceoffset) + 'mm (' + str(params.slicethickness / params.SPEsteps) + 'mm)')
-                else:
-                    self.IMag_ax.set_title('Magnitude Image @ Offset' + str(params.slicethickness / params.SPEsteps) + 'mm)')
-                    self.IPha_ax.set_title('Phase Image @ Offset' + str(params.slicethickness / params.SPEsteps) + 'mm)')
-
-                if params.lnkspacemag == 1:
-                    self.kMag_ax.imshow(np.log(params.k_amp[n, :, :]), cmap='inferno')
-                    self.kMag_ax.set_title('ln(k-Space Magnitude) ' + str(n+1))
-                else:
-                    self.kMag_ax.imshow(params.k_amp[n, :, :], cmap='inferno')
-                    self.kMag_ax.set_title('k-Space Magnitude ' + str(n+1))
+                    self.img_mag_cut = np.array(np.zeros((params.nPE, params.nPE)))
                     
-                self.kMag_ax.axis('off')
-                self.kMag_ax.set_aspect(1.0 / self.kMag_ax.get_data_ratio())
+                    X, Z = np.meshgrid(np.linspace(-params.FOV/2, params.FOV/2, params.nPE),np.linspace(-params.FOV/2, params.FOV/2, params.nPE))
+                    Y = np.array(np.zeros((params.nPE, params.nPE)))
+                    
+                    for n in range(params.img_mag.shape[0]):
+                        self.img_mag_cut[:, :] = params.img_mag[n, :, :]
+                        self.img_mag_cut[self.img_mag_cut > params.imagemaximum] = params.imagemaximum
+                        self.img_mag_cut[self.img_mag_cut < params.imageminimum] = params.imageminimum
+                        
+                        Y[:, :] = self.img_mag_cut[:, :]
+                        Y = (Y - params.imageminimum) / (params.imagemaximum - params.imageminimum)
+                        
+                        colors_1 = np.linspace(0,1,num=11)
+                        colors_1[colors_1 < np.min(Y)] = np.nan
+                        colors_1[colors_1 > np.max(Y)] = np.nan
+                        colors_2 = plt.get_cmap(params.imagecolormap)(colors_1)
+                        
+                        self.IMag_ax.contour(Y, Z, X, zdir='x', offset=self.image_positions[n], colors=colors_2)
+                    
+                self.IMag_ax.set_box_aspect([params.slicethickness/params.FOV, 1, 1])
+                self.IMag_ax.set_xlim([(-params.slicethickness/2), (params.slicethickness/2)])
                 
-                self.kPha_ax.imshow(params.k_pha[n, :, :], cmap='inferno')
-                self.kPha_ax.axis('off')
-                self.kPha_ax.set_aspect(1.0 / self.kPha_ax.get_data_ratio())
-                self.kPha_ax.set_title('k-Space Phase ' + str(n+1))
+                if params.image_grid == 1:
+                    self.x_major_ticks = self.image_positions
+                    if params.FOV <= 10: self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 1, 1)
+                    elif params.FOV > 10 and params.FOV <= 20: self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 2, 2)
+                    else: self.y_major_ticks = np.arange(math.ceil(-params.FOV / 2), math.floor(params.FOV / 2) + 4, 4)
+                    
+                    self.IMag_ax.axis('on')
+                    self.IMag_ax.set_xticks(self.x_major_ticks)
+                    self.IMag_ax.set_yticks(self.y_major_ticks)
+                    self.IMag_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                    self.IMag_ax.grid(which='major', visible=True)
+                    self.IMag_ax.grid(True)
+                    
+                    if params.imageorientation == 'XY':
+                        self.IMag_ax.set(xlabel='Z',ylabel='X', zlabel='Y')
+                    elif params.imageorientation == 'YX':
+                        self.IMag_ax.set(xlabel='Z',ylabel='Y', zlabel='X')
+                    elif params.imageorientation == 'YZ':
+                        self.IMag_ax.set(xlabel='X',ylabel='Y', zlabel='Z')
+                    elif params.imageorientation == 'ZY':
+                        self.IMag_ax.set(xlabel='X',ylabel='Z', zlabel='Y')
+                    elif params.imageorientation == 'ZX':
+                        self.IMag_ax.set(xlabel='Y',ylabel='Z', zlabel='X')
+                    elif params.imageorientation == 'XZ':
+                        self.IMag_ax.set(xlabel='Y',ylabel='X', zlabel='Z')
+                else:
+                    self.IMag_ax.axis('off')
+            
+            else:
+                gs = GridSpec(4, params.img_mag.shape[0], figure=self.all_fig)
+                
+                for n in range(params.img_mag.shape[0]):
+                    self.IMag_ax = self.all_fig.add_subplot(gs[0, n])
+                    self.IMag_ax.grid(False)
+                    self.IPha_ax = self.all_fig.add_subplot(gs[1, n])
+                    self.IPha_ax.grid(False)
+                    self.kMag_ax = self.all_fig.add_subplot(gs[2, n])
+                    self.kMag_ax.grid(False)
+                    self.kPha_ax = self.all_fig.add_subplot(gs[3, n])
+                    self.kPha_ax.grid(False)
+                    
+                    if params.imagefilter == 1: self.IMag_ax.imshow(params.img_mag[n, :, :], interpolation='gaussian', cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                    else: self.IMag_ax.imshow(params.img_mag[n, :, :], cmap=params.imagecolormap, vmin=params.imageminimum, vmax=params.imagemaximum, extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                    if params.imagefilter == 1: self.IPha_ax.imshow(params.img_pha[n, :, :], interpolation='gaussian', cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                    else: self.IPha_ax.imshow(params.img_pha[n, :, :], cmap='gray', extent=[(-params.FOV / 2), (params.FOV / 2), (-params.FOV / 2), (params.FOV / 2)])
+                    
+                    if params.image_grid == 1:
+                        self.major_ticks = np.arange(math.ceil((-params.FOV / 2)), math.floor((params.FOV / 2)) + 1, 1)
+                        
+                        self.IMag_ax.axis('on')
+                        self.IMag_ax.set_xticks(self.major_ticks)
+                        self.IMag_ax.set_yticks(self.major_ticks)
+                        self.IMag_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                        self.IMag_ax.grid(which='major', visible=True)
+                        
+                        self.IPha_ax.axis('on')
+                        self.IPha_ax.set_xticks(self.major_ticks)
+                        self.IPha_ax.set_yticks(self.major_ticks)
+                        self.IPha_ax.grid(which='major', color='#CCCCCC', linestyle='-')
+                        self.IPha_ax.grid(which='major', visible=True)
+                        
+                        if params.imageorientation == 'XY':
+                            self.IMag_ax.set_xlabel('X in mm')
+                            self.IMag_ax.set_ylabel('Y in mm')
+                            self.IPha_ax.set_xlabel('X in mm')
+                            self.IPha_ax.set_ylabel('Y in mm')
+                        elif params.imageorientation == 'YZ':
+                            self.IMag_ax.set_xlabel('Y in mm')
+                            self.IMag_ax.set_ylabel('Z in mm')
+                            self.IPha_ax.set_xlabel('Y in mm')
+                            self.IPha_ax.set_ylabel('Z in mm')
+                        elif params.imageorientation == 'ZX':
+                            self.IMag_ax.set_xlabel('Z in mm')
+                            self.IMag_ax.set_ylabel('X in mm')
+                            self.IPha_ax.set_xlabel('Z in mm')
+                            self.IPha_ax.set_ylabel('X in mm')
+                        elif params.imageorientation == 'YX':
+                            self.IMag_ax.set_xlabel('Y in mm')
+                            self.IMag_ax.set_ylabel('Z in mm')
+                            self.IPha_ax.set_xlabel('Y in mm')
+                            self.IPha_ax.set_ylabel('Z in mm')
+                        elif params.imageorientation == 'ZY':
+                            self.IMag_ax.set_xlabel('Z in mm')
+                            self.IMag_ax.set_ylabel('Y in mm')
+                            self.IPha_ax.set_xlabel('Z in mm')
+                            self.IPha_ax.set_ylabel('Y in mm')
+                        elif params.imageorientation == 'XZ':
+                            self.IMag_ax.set_xlabel('X in mm')
+                            self.IMag_ax.set_ylabel('Z in mm')
+                            self.IPha_ax.set_xlabel('X in mm')
+                            self.IPha_ax.set_ylabel('Z in mm')
+                            
+                    else:
+                        self.IMag_ax.axis('off')
+                        self.IPha_ax.axis('off')
+
+                    self.image_positions = np.linspace(-params.slicethickness/(params.SPEsteps/2)+(params.slicethickness/params.SPEsteps)/2, +params.slicethickness/(params.SPEsteps/2)-(params.slicethickness/params.SPEsteps)/2, params.SPEsteps)
+                    
+                    if params.autofreqoffset == 1:
+                        self.IMag_ax.set_title('Magnitude Image @ ' + str(self.image_positions[n] + params.sliceoffset) + 'mm (' + str(params.slicethickness / params.SPEsteps) + 'mm)')
+                        self.IPha_ax.set_title('Phase Image @ ' + str(self.image_positions[n] + params.sliceoffset) + 'mm (' + str(params.slicethickness / params.SPEsteps) + 'mm)')
+                    else:
+                        self.IMag_ax.set_title('Magnitude Image @ Offset' + str(params.slicethickness / params.SPEsteps) + 'mm)')
+                        self.IPha_ax.set_title('Phase Image @ Offset' + str(params.slicethickness / params.SPEsteps) + 'mm)')
+                        
+                    if params.lnkspacemag == 1:
+                        self.kMag_ax.imshow(np.log(params.k_amp[n, :, :]), cmap='inferno', vmin=np.min(np.log(params.k_amp)), vmax=np.max(np.log(params.k_amp)))
+                        self.kMag_ax.set_title('ln(k-Space Magnitude) ' + str(n+1))
+                    else:
+                        self.kMag_ax.imshow(params.k_amp[n, :, :], cmap='inferno', vmin=np.min(params.k_amp), vmax=np.max(params.k_amp))
+                        self.kMag_ax.set_title('k-Space Magnitude ' + str(n+1))
+                        
+                    self.kMag_ax.axis('off')
+                    self.kMag_ax.set_aspect(1.0 / self.kMag_ax.get_data_ratio())
+                    
+                    self.kPha_ax.imshow(params.k_pha[n, :, :], cmap='inferno')
+                    self.kPha_ax.axis('off')
+                    self.kPha_ax.set_aspect(1.0 / self.kPha_ax.get_data_ratio())
+                    self.kPha_ax.set_title('k-Space Phase ' + str(n+1))
 
             self.all_canvas.draw()
             self.all_canvas.setWindowTitle('Plot - ' + params.datapath + '.txt')
@@ -6647,110 +7982,333 @@ class PlotWindow(Plot_Window_Form, Plot_Window_Base):
             self.all_canvas.show()
             
     def save_spectrum_data(self):
-        timestamp = datetime.now()
-        params.dataTimestamp = timestamp.strftime('%Y%m%d_%H%M%S')
         if params.GUImode == 0:
             self.datatxt = np.matrix(np.zeros((params.freqencyaxis.shape[0], 2)))
             self.datatxt[:, 0] = params.freqencyaxis.reshape(params.freqencyaxis.shape[0], 1)
             self.datatxt[:, 1] = params.spectrumfft
-            np.savetxt('spectrumdata/' + params.dataTimestamp + '_Spectrum_Data.txt', self.datatxt)
+            
+            if params.agriMRI_mode == 1:
+                self.datapath_temp = ''
+                self.datapath_temp = params.datapath
+                self.agriMRI_folder_structure_temp = ''
+                self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Spectrum_data'
+                if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                np.savetxt(params.datapath + '_Spectrum_data.txt', self.datatxt)
+                params.datapath = self.datapath_temp
+                params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+            else: np.savetxt('data/Spectrum_data/' + params.datapath + '_Spectrum_data.txt', self.datatxt)
+            
             print('Spectrum data saved!')
         elif params.GUImode == 2:
             self.datatxt = np.matrix(np.zeros((params.T1xvalues.shape[0], 3)))
             self.datatxt[:, 0] = params.T1xvalues.reshape(params.T1xvalues.shape[0], 1)
             self.datatxt[:, 1] = params.T1yvalues1.reshape(params.T1yvalues1.shape[0], 1)
             self.datatxt[:, 2] = params.T1regyvalues1.reshape(params.T1regyvalues1.shape[0], 1)
-            np.savetxt('Tdata/' + params.dataTimestamp + '_T1_Data.txt', self.datatxt)
+            
+            if params.agriMRI_mode == 1:
+                self.datapath_temp = ''
+                self.datapath_temp = params.datapath
+                self.agriMRI_folder_structure_temp = ''
+                self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/T_data'
+                if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                np.savetxt(params.datapath + '_T1_data.txt', self.datatxt)
+                params.datapath = self.datapath_temp
+                params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+            else: np.savetxt('data/T_data/' + params.datapath + '_T1_data.txt', self.datatxt)
+            
             print('T1 data saved!')
         elif params.GUImode == 3:
             self.datatxt = np.matrix(np.zeros((params.T2xvalues.shape[0], 3)))
             self.datatxt[:, 0] = params.T2xvalues.reshape(params.T2xvalues.shape[0], 1)
             self.datatxt[:, 1] = params.T2yvalues.reshape(params.T2yvalues.shape[0], 1)
             self.datatxt[:, 2] = params.T2regyvalues.reshape(params.T2regyvalues.shape[0], 1)
-            np.savetxt('Tdata/' + params.dataTimestamp + '_T2_Data.txt', self.datatxt)
+            
+            if params.agriMRI_mode == 1:
+                self.datapath_temp = ''
+                self.datapath_temp = params.datapath
+                self.agriMRI_folder_structure_temp = ''
+                self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/T_data'
+                if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                np.savetxt(params.datapath + '_T2_data.txt', self.datatxt)
+                params.datapath = self.datapath_temp
+                params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+            else: np.savetxt('data/T_data/' + params.datapath + '_T2_data.txt', self.datatxt)
+            
             print('T2 data saved!')
 
     def save_mag_image_data(self):
-        timestamp = datetime.now()
-        params.dataTimestamp = timestamp.strftime('%Y%m%d_%H%M%S')
         if params.GUImode == 1:
-            if params.sequence == 32 or params.sequence == 33 or params.sequence == 34:
+            if params.sequence == 34 or params.sequence == 35 or params.sequence == 36:
                 self.datatxt = np.matrix(np.zeros((params.img_mag.shape[1], params.img_mag.shape[0] * params.img_mag.shape[2])))
                 for m in range(params.img_mag.shape[0]):
                     self.datatxt[:, m * params.img_mag.shape[2]:m * params.img_mag.shape[2] + params.img_mag.shape[2]] = params.img_mag[m, :, :]
-                np.savetxt('imagedata/' + params.dataTimestamp + '_3D_' + str(params.img_mag.shape[0]) + '_Magnitude_Image_Data.txt', self.datatxt)
+                
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_3D_Magnitude_Image_data.txt', self.datatxt)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_3D_Magnitude_Image_data.txt', self.datatxt)
+                
                 print('Magnitude 3D image data saved!')
-            elif params.sequence == 13 or params.sequence == 29:
-                print('WIP!')
-            elif params.sequence == 35:
-                os.makedirs(os.path.join('imagedata', params.dataTimestamp + '_Magnitude_Image_3D_Data'))
-                for n in range(params.img_mag.shape[0]):
-                    np.savetxt('imagedata/' + params.dataTimestamp + '_Magnitude_Image_3D_Data' + '/' + params.dataTimestamp + '_Magnitude_Image_Data_' + str(n) + '.txt', params.img_mag[n, :, :])
-                print('Magnitude image data saved!')
+            elif params.sequence == 14 or params.sequence == 31:
+                print('WIP! (Diffusion)')
+            elif params.sequence == 15 or params.sequence == 16 or params.sequence == 32 or params.sequence == 33:
+                print('WIP! (Flow compensation)')
             else:
-                np.savetxt('imagedata/' + params.dataTimestamp + '_Magnitude_Image_Data.txt', params.img_mag)
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_Magnitude_Image_data.txt', params.img_mag)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_Magnitude_Image_data.txt', params.img_mag)
+                
                 print('Magnitude image data saved!')
         elif params.GUImode == 4:
             print('WIP!')
         elif params.GUImode == 5:
             if params.sequence == 10:
-                print('WIP!')
-                os.makedirs(os.path.join('imagedata', params.dataTimestamp + '_Magnitude_Image_Stitching_3D_Data'))
-                for n in range(params.img_st_mag.shape[0]):
-                    np.savetxt('imagedata/' + params.dataTimestamp + '_Magnitude_Image_Stitching_3D_Data' + '/' + params.dataTimestamp + '_Magnitude_Image_Stitching_Data_' + str(n) + '.txt', params.img_st_mag[n, :, :])
-                print('Magnitude image data saved!')
+                #print('WIP!')
+                self.datatxt = np.matrix(np.zeros((params.img_st_mag.shape[1], params.img_st_mag.shape[0] * params.img_st_mag.shape[2])))
+                for m in range(params.img_st_mag.shape[0]):
+                    self.datatxt[:, m * params.img_st_mag.shape[2]:m * params.img_st_mag.shape[2] + params.img_st_mag.shape[2]] = params.img_st_mag[m, :, :]
+                
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_3D_Magnitude_Image_Stitching_data.txt', self.datatxt)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_3D_Magnitude_Image_Stitching_data.txt', self.datatxt)
+                
+                print('Magnitude 3D image stitching data saved!')
             else:
-                np.savetxt('imagedata/' + params.dataTimestamp + '_Magnitude_Image_Stitching_Data.txt', params.img_st_mag)
-                print('Magnitude image data saved!')
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_Magnitude_Image_Stitching_data.txt', params.img_st_mag)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_Magnitude_Image_Stitching_data.txt', params.img_st_mag)
+                
+                print('Magnitude image stitching data saved!')
 
     def save_pha_image_data(self):
-        timestamp = datetime.now()
-        params.dataTimestamp = timestamp.strftime('%Y%m%d_%H%M%S')
         if params.GUImode == 1:
-            if params.sequence == 32 or params.sequence == 33 or params.sequence == 34:
+            if params.sequence == 34 or params.sequence == 35 or params.sequence == 36:
                 self.datatxt = np.matrix(np.zeros((params.img_pha.shape[1], params.img_pha.shape[0] * params.img_pha.shape[2])))
                 for m in range(params.img_pha.shape[0]):
                     self.datatxt[:, m * params.img_pha.shape[2]:m * params.img_pha.shape[2] + params.img_pha.shape[2]] = params.img_pha[m, :, :]
-                np.savetxt('imagedata/' + params.dataTimestamp + '_3D_' + str(params.img_pha.shape[0]) + '_Phase_Image_Data.txt', self.datatxt)
-                print('Magnitude 3D image data saved!')
-            elif params.sequence == 13 or params.sequence == 29:
-                print('WIP!')
+                
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_3D_Phase_Image_data.txt', self.datatxt)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_3D_Phase_Image_data.txt', self.datatxt)
+                
+                print('Phase 3D image data saved!')
+            elif params.sequence == 14 or params.sequence == 31:
+                print('WIP! (Diffusion)')
+            elif params.sequence == 15 or params.sequence == 16 or params.sequence == 32 or params.sequence == 33:
+                print('WIP! (Flow compensation)')
             else:
-                np.savetxt('imagedata/' + params.dataTimestamp + '_Phase_Image_Data.txt', params.img_pha)
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_Phase_Image_data.txt', params.img_pha)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_Phase_Image_data.txt', params.img_pha)
+                
                 print('Phase image data saved!')
         elif params.GUImode == 4:
             print('WIP!')
         elif params.GUImode == 5:
-            if params.sequence == 4:
-                print('WIP!')
+            if params.sequence == 10:
+                #print('WIP!')
+                self.datatxt = np.matrix(np.zeros((params.img_st_pha.shape[1], params.img_st_pha.shape[0] * params.img_st_pha.shape[2])))
+                for m in range(params.img_st_pha.shape[0]):
+                    self.datatxt[:, m * params.img_st_pha.shape[2]:m * params.img_st_pha.shape[2] + params.img_st_pha.shape[2]] = params.img_st_pha[m, :, :]
+                
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_3D_Phase_Image_Stitching_data.txt', self.datatxt)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_3D_Phase_Image_Stitching_data.txt', self.datatxt)
+                
+                print('Phase 3D image stitching data saved!')
             else:
-                np.savetxt('imagedata/' + params.dataTimestamp + '_Phase_Image_Stitching_Data.txt', params.img_st_pha)
-                print('Magnitude image data saved!')
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_Phase_Image_Stitching_data.txt', params.img_st_pha)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_Phase_Image_Stitching_data.txt', params.img_st_pha)
+                
+                print('Phase image stitching data saved!')
 
     def save_image_data(self):
-        timestamp = datetime.now()
-        params.dataTimestamp = timestamp.strftime('%Y%m%d_%H%M%S')
         if params.GUImode == 1:
-            if params.sequence == 32 or params.sequence == 33 or params.sequence == 34:
-                self.datatxt = np.matrix(np.zeros((params.img.shape[1], params.img.shape[0] * params.img.shape[2]), dtype=np.complex64))
+            if params.sequence == 34 or params.sequence == 35 or params.sequence == 36:
+                self.datatxt = np.matrix(np.zeros((params.img.shape[1], params.img.shape[0] * params.img.shape[2])))
                 for m in range(params.img.shape[0]):
                     self.datatxt[:, m * params.img.shape[2]:m * params.img.shape[2] + params.img.shape[2]] = params.img[m, :, :]
-                np.savetxt('imagedata/' + params.dataTimestamp + '_3D_' + str(params.img.shape[0]) + '_Image_Data.txt', self.datatxt)
-                print('Magnitude 3D image data saved!')
-            elif params.sequence == 13 or params.sequence == 29:
-                print('WIP!')
+                
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_3D_Image_data.txt', self.datatxt)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_3D_Image_data.txt', self.datatxt)
+                
+                print('3D image data saved!')
+            elif params.sequence == 14 or params.sequence == 31:
+                print('WIP! (Diffusion)')
+            elif params.sequence == 15 or params.sequence == 16 or params.sequence == 32 or params.sequence == 33:
+                print('WIP! (Flow compensation)')
             else:
-                np.savetxt('imagedata/' + params.dataTimestamp + '_Image_Data.txt', params.img)
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_Image_data.txt', params.img)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_Image_data.txt', params.img)
+                
                 print('Image data saved!')
         elif params.GUImode == 4:
             print('WIP!')
         elif params.GUImode == 5:
-            if params.sequence == 4:
-                print('WIP!')
+            if params.sequence == 10:
+                #print('WIP!')
+                self.datatxt = np.matrix(np.zeros((params.img_st.shape[1], params.img_st.shape[0] * params.img_st.shape[2])))
+                for m in range(params.img_st.shape[0]):
+                    self.datatxt[:, m * params.img_st.shape[2]:m * params.img_st.shape[2] + params.img_st.shape[2]] = params.img_st[m, :, :]
+                
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_3D_Image_Stitching_data.txt', self.datatxt)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_3D_Image_Stitching_data.txt', self.datatxt)
+                
+                print('3D image stitching data saved!')
             else:
-                np.savetxt('imagedata/' + params.dataTimestamp + '_Image_Stitching_Data.txt', params.img_st)
-                print('Magnitude image data saved!')
-    
+                if params.agriMRI_mode == 1:
+                    self.datapath_temp = ''
+                    self.datapath_temp = params.datapath
+                    self.agriMRI_folder_structure_temp = ''
+                    self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.agriMRI_folder_structure + '/Image_data'
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.datapath = params.agriMRI_folder_structure + '/' + params.datapath
+                    np.savetxt(params.datapath + '_Image_Stitching_data.txt', params.img_st)
+                    params.datapath = self.datapath_temp
+                    params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
+                else: np.savetxt('data/Image_data/' + params.datapath + '_Image_Stitching_data.txt', params.img_st)
+                
+                print('Image stitching data saved!')
+        
     def view_3D_layers(self):
         if self.dialog_3D_layers == None:
             self.dialog_3D_layers = View3DLayersDialog(parent = self)
@@ -6979,7 +8537,7 @@ class SARMonitorWindow(SAR_Window_Form, SAR_Window_Base):
         
     def log_init(self):
         params.SAR_LOG_counter += 1
-        self.time = datetime.now().strftime('%d-%m-%Y')
+        self.time = datetime.datetime.now().strftime('%d-%m-%Y')
         self.file_name = f'SAR_Log_{params.SAR_LOG_counter}.txt'
         
         if params.SAR_LOG_counter==10:
@@ -7077,7 +8635,7 @@ class SARMonitorWindow(SAR_Window_Form, SAR_Window_Base):
             self.sequence_temp = params.sequence
             
             params.GUImode = 0
-            params.sequence = 23
+            params.sequence = 27
             #params.saveFileParameter()
                     
             self.data_array.clear()
@@ -7135,7 +8693,7 @@ class SARMonitorWindow(SAR_Window_Form, SAR_Window_Base):
              
     def write_message(self,data):
         with open(self.logfile_path,'a') as file:
-            self.time = datetime.now().strftime('%H-%M-%S')
+            self.time = datetime.datetime.now().strftime('%H-%M-%S')
             file.writelines(f'send({self.time}): {data}\n')
         
         self.data_bytes = data.encode('utf-8')
@@ -7177,7 +8735,7 @@ class SARMonitorWindow(SAR_Window_Form, SAR_Window_Base):
         
     def new_pat(self):      
         params.SAR_LOG_counter += 1
-        self.time = datetime.now().strftime('%d-%m-%Y')
+        self.time = datetime.datetime.now().strftime('%d-%m-%Y')
         self.file_name = f'SAR_Log_{params.SAR_LOG_counter}.txt'      
         if params.SAR_LOG_counter==10:
             params.SAR_LOG_counter=0    
@@ -7204,7 +8762,7 @@ class SARMonitorWindow(SAR_Window_Form, SAR_Window_Base):
         self.SAR_New_Pos_pushButton.setEnabled(False)
         
     def load_data(self):       
-        self.time = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
+        self.time = datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
         self.file_name = f'SAR_Data_{params.SAR_LOG_counter}.txt'   
         self.file_path = os.path.join(self.folder_path,self.file_name)
         if os.path.exists(self.logfile_path):
@@ -7416,7 +8974,7 @@ class SARMonitorWindow(SAR_Window_Form, SAR_Window_Base):
             if not(self.last_Data=='SARstop' and data in alert):
                 try:
                     with open(self.logfile_path,'a') as file:
-                        self.time = datetime.now().strftime('%H-%M-%S')
+                        self.time = datetime.datetime.now().strftime('%H-%M-%S')
                         file.writelines(f'catch({self.time}): {data}\n')
                 except AttributeError:
                     print('AttributeError')
@@ -7585,7 +9143,7 @@ class Overlay(QWidget):
         self.setStyleSheet('background-color: rgba(0,0,0,128)')
         label = QLabel('...', self)
         label.setAlignment(Qt.AlignCenter)
-        label.setStyleSheet('color: white; font-size: 24px;')
+        label.setStyleSheet("color: white; font-size: 24px;")
         
         layout = QVBoxLayout(self)
         layout.addWidget(label)
@@ -7681,17 +9239,17 @@ class MotorToolsWindow(Motor_Window_Form, Motor_Window_Base):
     def new_move_value(self, box=None):
         self.Motor_MoveBy_doubleSpinBox.blockSignals(True)
         self.Motor_MoveTo_doubleSpinBox.blockSignals(True)
+
         if box == 'to':
-            self.Motor_MoveBy_doubleSpinBox.setValue(
-                self.Motor_MoveTo_doubleSpinBox.value() - float(self.Motor_Position_lineEdit.text()))
+            params.motor_goto_position = self.Motor_MoveTo_doubleSpinBox.value()
+            self.Motor_MoveBy_doubleSpinBox.setValue((params.motor_goto_position - params.motor_actual_position))
         elif box == 'by':
-            self.Motor_MoveTo_doubleSpinBox.setValue(
-                self.Motor_MoveBy_doubleSpinBox.value() + float(self.Motor_Position_lineEdit.text()))
+            params.motor_goto_position = params.motor_actual_position + self.Motor_MoveBy_doubleSpinBox.value()
+            self.Motor_MoveTo_doubleSpinBox.setValue(params.motor_goto_position)
+        
         self.Motor_MoveBy_doubleSpinBox.blockSignals(False)
         self.Motor_MoveTo_doubleSpinBox.blockSignals(False)
 
-        params.motor_goto_position = self.Motor_MoveTo_doubleSpinBox.value()
-        
     def move_to_center(self):
         self.Motor_Home_pushButton.setEnabled(False)
         self.Motor_Apply_pushButton.setEnabled(False)
@@ -7707,31 +9265,36 @@ class MotorToolsWindow(Motor_Window_Form, Motor_Window_Base):
         msg_box.setStandardButtons(QMessageBox.Ok)
         msg_box.exec()
         
-        params.motor_goto_position = 120
+        params.motor_goto_position = params.PB_marker_isocenter_distance
         proc.motor_move(motor=self.motor)
         
         params.motor_actual_position = params.motor_goto_position
         
-        self.motor_messagebox_string = ('Loosen the test tube holder screw.')
-        msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Warning)
-        msg_box.setText(self.motor_messagebox_string)
-        msg_box.setStandardButtons(QMessageBox.Ok)
-        msg_box.exec()
+        if params.motor_actual_position != params.PB_isocenter_position:
         
-        params.motor_goto_position = 0
-        proc.motor_move(motor=self.motor)
-        
-        params.motor_actual_position = params.motor_goto_position
-        
-        self.motor_messagebox_string = ('Carefully tighten the test tube holder screw.')
-        msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Warning)
-        msg_box.setText(self.motor_messagebox_string)
-        msg_box.setStandardButtons(QMessageBox.Ok)
-        msg_box.exec()
+            self.motor_messagebox_string = ('Loosen the test tube holder screw.')
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setText(self.motor_messagebox_string)
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec()
+            
+            params.motor_goto_position = params.PB_isocenter_position
+            proc.motor_move(motor=self.motor)
+            
+            params.motor_actual_position = params.motor_goto_position
+            
+            self.motor_messagebox_string = ('Carefully tighten the test tube holder screw.')
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setText(self.motor_messagebox_string)
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec()
         
         self.Motor_Position_lineEdit.setText(str(params.motor_actual_position))
+
+        params.motor_goto_position = self.Motor_MoveTo_doubleSpinBox.value()
+        
         self.new_move_value(box='to')
         self.Motor_MoveBy_doubleSpinBox.setMaximum(params.motor_axis_limit_positive - params.motor_actual_position)
         self.Motor_MoveBy_doubleSpinBox.setMinimum(params.motor_axis_limit_negative - params.motor_actual_position)
@@ -7740,15 +9303,17 @@ class MotorToolsWindow(Motor_Window_Form, Motor_Window_Base):
         self.Motor_Apply_pushButton.setEnabled(True)
         self.Motor_MoveToCenter_pushButton.setEnabled(True)
 
+
 class ConnectionDialog(Conn_Dialog_Base, Conn_Dialog_Form):
     connected = pyqtSignal()
 
     def __init__(self, parent=None):
         super(ConnectionDialog, self).__init__(parent)
         self.setupUi(self)
-
+        
         self.ui = loadUi('ui/connDialog.ui')
-        self.setGeometry(10, 40, 500, 150)
+        screen = QDesktopWidget().availableGeometry()
+        self.setGeometry(int((screen.width() - 500) / 2), int((screen.height() - 150) / 2), 500, 150)
         self.ui.closeEvent = self.closeEvent
         self.conn_help = QPixmap('ui/connection_help.png')
         self.help.setVisible(False)
@@ -7759,17 +9324,18 @@ class ConnectionDialog(Conn_Dialog_Base, Conn_Dialog_Form):
         self.offmod_btn.clicked.connect(self.offlinemode)
         self.status_label.setVisible(False)
 
-        IPvalidator = QRegExp(
-            '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.)'
-            '{3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$')
+        IPvalidator = QRegExp(r'^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.)''{3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$')
         self.ip_box.setValidator(QRegExpValidator(IPvalidator, self))
         for item in params.hosts: self.ip_box.addItem(item)
+        
+        self.setStyleSheet(self.styleSheet() + "\n* { font-family: 'Piboto Condensed', 'Arial Narrow'; font-size: 16px;}")
+        self.ip_box.setStyleSheet("font-family: 'Piboto Condensed', 'Arial Narrow'; font-size: 16px;")
 
         self.mainwindow = parent
 
     def connect_event(self):
         params.ip = self.ip_box.currentText()
-        print(params.ip)
+        print('Console IP: ' + params.ip)
 
         connection = seq.conn_client()
 
@@ -7780,8 +9346,9 @@ class ConnectionDialog(Conn_Dialog_Base, Conn_Dialog_Form):
             self.connected.emit()
             self.mainwindow.show()
             self.mainwindow.Acquire_pushButton.setEnabled(params.connectionmode)
+            if params.agriMRI_mode == 1: self.mainwindow.AgriMRI_Metadata_pushButton.show()
+            else: self.mainwindow.AgriMRI_Metadata_pushButton.hide()
             self.close()
-
 
         elif not connection:
             params.connectionmode = False
@@ -7790,7 +9357,8 @@ class ConnectionDialog(Conn_Dialog_Base, Conn_Dialog_Form):
             self.conn_btn.setText('Retry')
             self.help.setPixmap(self.conn_help)
             self.help.setVisible(True)
-            self.setGeometry(10, 40, 500, 350)
+            screen = QDesktopWidget().availableGeometry()
+            self.setGeometry(int((screen.width() - 500) / 2), int((screen.height() - 150) / 2), 500, 350)
 
         else:
             params.connectionmode = False
@@ -7829,6 +9397,8 @@ class ConnectionDialog(Conn_Dialog_Base, Conn_Dialog_Form):
         params.saveFileParameter()
         self.mainwindow.show()
         self.mainwindow.Acquire_pushButton.setEnabled(params.connectionmode)
+        if params.agriMRI_mode == 1: self.mainwindow.AgriMRI_Metadata_pushButton.show()
+        else: self.mainwindow.AgriMRI_Metadata_pushButton.hide()
         self.close()
         
 class View3DLayersDialog(View3D_Dialog_Form, View3D_Dialog_Base):
@@ -7839,6 +9409,14 @@ class View3DLayersDialog(View3D_Dialog_Form, View3D_Dialog_Base):
         self.ui = loadUi('ui/view_3D.ui')
         self.setWindowTitle('3D Layers Plot')
         self.setGeometry(420, 40, 1160, 950)
+        
+        if params.agriMRI_mode == 1:
+            self.datapath_temp = ''
+            self.datapath_temp = params.datapath
+            self.agriMRI_folder_structure_temp = ''
+            self.agriMRI_folder_structure_temp = params.agriMRI_folder_structure
+            params.agriMRI_folder_structure = params.agriMRI_folder_structure + 'AgriMRI_rawdata/'
+            params.datapath = params.agriMRI_folder_structure + params.datapath
         
         if params.headerfileformat == 0:
             if os.path.isdir(params.datapath) == True:
@@ -7881,12 +9459,12 @@ class View3DLayersDialog(View3D_Dialog_Form, View3D_Dialog_Base):
         else:
             if os.path.isdir(params.datapath) == True:
                 if os.path.isfile(params.datapath + '/Image_Stitching_Header.json') == True:
-                    with open(params.datapath + '/Image_Stitching_Header.json', 'r') as j:
+                    with open(params.datapath + '/Image_Stitching_Header.json', 'r', encoding='utf-8') as j:
                         jsonparams = json.loads(j.read())
                 else: print('No .json header file!!')
             elif os.path.isdir(params.datapath) == False:
                 if os.path.isfile(params.datapath + '_Header.json') == True:
-                    with open(params.datapath + '_Header.json', 'r') as j:
+                    with open(params.datapath + '_Header.json', 'r', encoding='utf-8') as j:
                         jsonparams = json.loads(j.read())
                 else: print('No .json header file!!')
             else: print('No directory or .json header file!!')
@@ -7901,6 +9479,11 @@ class View3DLayersDialog(View3D_Dialog_Form, View3D_Dialog_Base):
             self.SPEsteps = int(jsonparams['3D phase steps'])
             self.motor_image_count = int(jsonparams['Motor image count'])
             self.motor_total_image_length = jsonparams['Motor total image length [mm]']
+            
+            
+        if params.agriMRI_mode == 1:
+            params.datapath = self.datapath_temp
+            params.agriMRI_folder_structure = self.agriMRI_folder_structure_temp
 
         if self.GUImode == 5 and self.sequence != 10: self.SPEsteps = 1
 
@@ -8296,11 +9879,6 @@ class View3DLayersDialog(View3D_Dialog_Form, View3D_Dialog_Base):
                 return np.flip(np.rot90(data[:, :, slice_index]))
                 
 def run():
-    print('________________________________________________________')
-    print('Relax 2.0')
-    print('Programmed by Marcus Prier, Magdeburg, 2025')
-    print('________________________________________________________\n')
-
     app = QApplication(sys.argv)
     gui = MainWindow()
 

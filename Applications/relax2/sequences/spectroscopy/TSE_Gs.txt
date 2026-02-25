@@ -41,14 +41,14 @@ PR 7, 400
 PR 3, 400	// Slice rephaser length
 GRADOFFSET 62
 PR 7, 210
-PR 3, 1060	// Pause
+PR 3, 22560	// Pause
 GRADOFFSET 82
 PR 7, 210
 PR 3, 400	// Crusher length
 GRADOFFSET 102
 PR 7, 110
 PR 12, 100
-TXOFFSET 1000 
+TXOFFSET 1000
 PR 5, 800	// 180deg RF Pulse
 GRADOFFSET 122
 PR 12, 10
@@ -56,15 +56,16 @@ PR 7, 200
 PR 3, 400	// Crusher length
 GRADOFFSET 142
 PR 7, 210
-PR 3, 770	// Pause
-PR 4, 3000	// Sampling window
-PR 4, 790	// Pause
+PR 3, 20770	// Pause
+PR 4, 6000	// Sampling window
+PR 4, 20790	// Pause
 GRADOFFSET 82
 PR 8, 210
 PR 4, 400	// Crusher length
 GRADOFFSET 102
 PR 8, 110
-PR 13, 100 
+PR 13, 100
+TXOFFSET 6000
 PR 6, 800	// 180deg RF Pulse
 GRADOFFSET 122
 PR 13, 10
@@ -72,15 +73,16 @@ PR 8, 200
 PR 4, 400	// Crusher length
 GRADOFFSET 142
 PR 8, 210
-PR 4, 770	// Pause
-PR 4, 3000	// Sampling window
-PR 4, 790	// Pause
+PR 4, 20770	// Pause
+PR 4, 6000	// Sampling window
+PR 4, 20790	// Pause
 GRADOFFSET 82
 PR 8, 210
 PR 4, 400	// Crusher length
 GRADOFFSET 102
 PR 8, 110
-PR 13, 100 
+PR 13, 100
+TXOFFSET 1000
 PR 6, 800	// 180deg RF Pulse
 GRADOFFSET 122
 PR 13, 10
@@ -88,15 +90,16 @@ PR 8, 200
 PR 4, 400	// Crusher length
 GRADOFFSET 142
 PR 8, 210
-PR 4, 770	// Pause
-PR 4, 3000	// Sampling window
-PR 4, 790	// Pause
+PR 4, 20770	// Pause
+PR 4, 6000	// Sampling window
+PR 4, 20790	// Pause
 GRADOFFSET 82
 PR 8, 210
 PR 4, 400	// Crusher length
 GRADOFFSET 102
 PR 8, 110
-PR 13, 100 
+PR 13, 100
+TXOFFSET 6000
 PR 6, 800	// 180deg RF Pulse
 GRADOFFSET 122
 PR 13, 10
@@ -104,8 +107,8 @@ PR 8, 200
 PR 4, 400	// Crusher length
 GRADOFFSET 142
 PR 8, 210
-PR 4, 770	// Pause
-PR 4, 3000	// Sampling window
+PR 4, 20770	// Pause
+PR 4, 6000	// Sampling window
 GRADOFFSET 162
 PR 8, 210
 PR 4, 1000	// Spoiler length

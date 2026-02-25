@@ -33,22 +33,22 @@ PR 7, 20		// enable gradient offsets
 PR 11, 100
 PR 5, 100	// Flip RF Pulse
 PR 11, 10
-PR 3, 0	// Pause
+PR 3, 50	// Pause
 GRADOFFSET 42
 PR 7, 210
-PR 3, 100	// Readout prephaser length
+PR 3, 1350	// Readout prephaser length
 GRADOFFSET 62
 PR 7, 410
-PR 4, 1000	// Sampling window
+PR 4, 6000	// Sampling window
 GRADOFFSET 102
 PR 8, 410
-PR 4, 1000	// Sampling window
+PR 4, 6000	// Sampling window
 GRADOFFSET 142
 PR 8, 410
-PR 4, 1000	// Sampling window
+PR 4, 6000	// Sampling window
 GRADOFFSET 182
 PR 8, 410
-PR 4, 1000	// Sampling window
+PR 4, 6000	// Sampling window
 GRADOFFSET 222
 PR 8, 210
 PR 4, 0

@@ -1,0 +1,60 @@
+code;description
+00;Dry seed (caryopsis)
+01;Beginning of seed imbibition
+03;Seed imbibition complete (pigeon breast)
+05;Radicle emerged from caryopsis
+06;Radicle elongated, root hairs and/or side roots visible
+07;Coleoptile emerged from caryopsis (in water-rice this stage occurs before stage 05)
+09;Imperfect leaf emerges (still rolled) at the tip of the coleoptile
+10;Imperfect leaf unrolled, tip of first true leaf visible
+11;First leaf unfolded
+12;2 leaves unfolded
+13;3 leaves unfolded
+14;4 leaves unfolded
+15;5 leaves unfolded
+16;6 leaves unfolded
+17;7 leaves unfolded
+18;8 leaves unfolded
+19;9 or more leaves unfolded
+21;Beginning of tillering: first tiller detectable
+22;2 tillers detectable
+23;3 tillers detectable
+24;4 tillers detectable
+25;5 tillers detectable
+26;6 tillers detectable
+27;7 tillers detectable
+28;8 tillers detectable
+29;Maximum number of tillers detectable
+30;Panicle initiation or green ring stage: chlorophyll accumulates in the stem tissue, forming a green ring
+32;Panicle formation: panicle 1–2 mm in length
+34;Internode elongation or jointing stage: internodes begin to elongate, panicle more than 2 mm long (variety-dependent)
+37;Flag leaf just visible, still rolled, panicle moving upwards
+39;Flag leaf stage: flag leaf unfolded, collar regions (auricle and ligule) of flag leaf and penultimate leaf aligned (pre-boot stage)
+41;Early boot stage: upper part of stem slightly thickened, sheath of flag leaf about 5 cm out of penultimate leaf sheath
+43;Mid boot stage: sheath of flag leaf 5–10 cm out of the penultimate leaf sheath
+45;Late boot stage: flag leaf sheath swollen, sheath of flag leaf more than 10 cm out of penultimate leaf sheath
+47;Flag leaf sheath opening
+49;Flag leaf sheath open
+51;Beginning of panicle emergence: tip of inflorescence emerged from sheath
+52;20% of panicle emerged
+53;30% of panicle emerged
+54;40% of panicle emerged
+55;Middle of panicle emergence: neck node still in sheath
+56;60% of panicle emerged
+57;70% of panicle emerged
+58;80% of panicle emerged
+59;End of panicle emergence: neck node level with the flag leaf auricle, anthers not yet visible
+61;Beginning of flowering: anthers visible at top of panicle
+65;Full flowering: anthers visible on most spikelets
+69;End of flowering: all spikelets have completed flowering but some dehydrated anthers may remain
+71;Watery ripe: first grains have reached half their final size
+73;Early milk
+75;Medium milk: grain content milky
+77;Late milk
+83;Early dough
+85;Soft dough: grain content soft but dry, fingernail impression not held, grains and glumes still green
+87;Hard dough: grain content solid, fingernail impression held
+89;Fully ripe: grain hard, difficult to divide with thumbnail
+92;Over-ripe: grain very hard, cannot be dented by thumbnail
+97;Plant dead and collapsing
+99;Harvested product

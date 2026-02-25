@@ -1,7 +1,7 @@
 ################################################################################
 #
 # Author: Marcus Prier
-# Date: 2025
+# Date: 2026
 #
 ################################################################################
 
@@ -30,9 +30,7 @@ from parameter_handler import params
 
 class process:
     def __init__(self):
-
-        params.loadParam()
-        params.loadData()
+        pass
 
     def motor_move(self, motor=None):
         if motor is not None and params.motor_actual_position != params.motor_goto_position:                     
@@ -134,7 +132,7 @@ class process:
 
         params.freqencyaxis = np.linspace(-params.frequencyrange / 2, params.frequencyrange / 2, self.data_idx)
 
-        print(params.spectrumdata.shape)
+        print('Spectrum shape: ' + str(params.spectrumdata.shape))
         
         self.fft = np.matrix(np.zeros((params.spectrumdata.shape[0], params.spectrumdata.shape[1]), dtype=np.complex64))
         
@@ -154,7 +152,7 @@ class process:
         self.kspace_centerx = int(params.kspace.shape[1] / 2)
         self.kspace_centery = int(params.kspace.shape[0] / 2)
 
-        print('k-Space shape: ', params.kspace.shape)
+        print('k-space shape: ' + str(params.kspace.shape))
 
         # Undersampling (Option)
         if params.ustime == 1:
@@ -450,12 +448,9 @@ class process:
         # Load kspace from file
         self.procdata = np.genfromtxt(params.datapath + '.txt', dtype=np.complex64)
         params.kspace = np.transpose(self.procdata)
-
-        self.kspace_centerx = int(params.kspace.shape[1] / 2)
-        self.kspace_centery = int(params.kspace.shape[0] / 2)
-
-        print('kspace shape', params.kspace.shape)
-
+        
+        print('k-space shape: ' + str(params.kspace.shape))
+        
         # Undersampling (Option)
         if params.ustime == 1:
             for n in range(params.kspace.shape[1]):
@@ -466,6 +461,35 @@ class process:
             for n in range(params.kspace.shape[0]):
                 if n % params.usphaseidx != 0:
                     params.kspace[n, :] = 0
+        
+        self.kspacestep = params.kspace.shape[1]/(params.nPE*params.radialosfactor)
+        
+        
+        if params.kspace.shape[0] * params.radialanglestep == 360:
+            params.kspaceradial = np.matrix(np.zeros((2*params.nPE*params.radialosfactor, 2*params.nPE*params.radialosfactor), dtype = np.complex64))
+
+            self.radialangles = np.arange(0, 360, params.radialanglestep)
+            
+            for n in range(params.kspace.shape[0]):
+                self.radialangleradmod100 = int(math.radians(self.radialangles[n])*100)
+                
+                for m in range(int(params.nPE*params.radialosfactor)):
+                    params.kspaceradial[int(np.round(params.nPE*params.radialosfactor + math.sin(self.radialangleradmod100/100)*m)), int(np.round(params.nPE*params.radialosfactor + math.cos(self.radialangleradmod100/100)*m))] = params.kspace[n, int(np.round(m*self.kspacestep))]
+        else:
+            params.kspaceradial = np.matrix(np.zeros((params.nPE*params.radialosfactor, params.nPE*params.radialosfactor), dtype = np.complex64))
+
+            self.radialangles = np.arange(0, 180, params.radialanglestep)
+            
+            for n in range(params.kspace.shape[0]):
+                self.radialangleradmod100 = int(math.radians(self.radialangles[n])*100)
+            
+                for m in range(params.nPE*params.radialosfactor):
+                    params.kspaceradial[int(params.nPE/2*params.radialosfactor + math.sin(self.radialangleradmod100/100)*(m-params.nPE/2*params.radialosfactor)), int(params.nPE/2*params.radialosfactor + math.cos(self.radialangleradmod100/100)*(m-params.nPE/2*params.radialosfactor))] = params.kspace[n, int(m*self.kspacestep)]
+
+        self.kspace_centerx = int(params.kspaceradial.shape[1] / 2)
+        self.kspace_centery = int(params.kspaceradial.shape[0] / 2)
+
+        print('kspace radial shape', params.kspaceradial.shape)
 
         if params.cutcirc == 1:
             # Set kSpace to 0 (Option)
@@ -473,37 +497,37 @@ class process:
             self.cuto = params.kspace.shape[1] / 2 * (1 - params.cutoutsidevalue / 100)
 
             if params.cutcenter == 1:
-                for ii in range(params.kspace.shape[1]):
-                    for jj in range(params.kspace.shape[0]):
-                        if np.sqrt((ii - (params.kspace.shape[1] / 2)) ** 2 + (jj * params.kspace.shape[1] / params.kspace.shape[0] - (params.kspace.shape[1] / 2)) ** 2) <= self.cutc:
-                            params.kspace[jj, ii] = 0
+                for ii in range(params.kspaceradial.shape[1]):
+                    for jj in range(params.kspaceradial.shape[0]):
+                        if np.sqrt((ii - (params.kspaceradial.shape[1] / 2)) ** 2 + (jj * params.kspaceradial.shape[1] / params.kspaceradial.shape[0] - (params.kspaceradial.shape[1] / 2)) ** 2) <= self.cutc:
+                            params.kspaceradial[jj, ii] = 0
 
             if params.cutoutside == 1:
-                for ii in range(params.kspace.shape[1]):
-                    for jj in range(params.kspace.shape[0]):
-                        if np.sqrt((ii - (params.kspace.shape[1] / 2)) ** 2 + (jj * params.kspace.shape[1] / params.kspace.shape[0] - (params.kspace.shape[1] / 2)) ** 2) >= self.cuto:
-                            params.kspace[jj, ii] = 0
+                for ii in range(params.kspaceradial.shape[1]):
+                    for jj in range(params.kspaceradial.shape[0]):
+                        if np.sqrt((ii - (params.kspaceradial.shape[1] / 2)) ** 2 + (jj * params.kspaceradial.shape[1] / params.kspaceradial.shape[0] - (params.kspaceradial.shape[1] / 2)) ** 2) >= self.cuto:
+                            params.kspaceradial[jj, ii] = 0
 
         if params.cutrec == 1:
             # Set kSpace to 0 (Option)
-            self.cutcx = int(params.kspace.shape[1] / 2 * params.cutcentervalue / 100)
-            self.cutcy = int(params.kspace.shape[0] / 2 * params.cutcentervalue / 100)
-            self.cutox = int(params.kspace.shape[1] / 2 * params.cutoutsidevalue / 100)
-            self.cutoy = int(params.kspace.shape[0] / 2 * params.cutoutsidevalue / 100)
+            self.cutcx = int(params.kspaceradial.shape[1] / 2 * params.cutcentervalue / 100)
+            self.cutcy = int(params.kspaceradial.shape[0] / 2 * params.cutcentervalue / 100)
+            self.cutox = int(params.kspaceradial.shape[1] / 2 * params.cutoutsidevalue / 100)
+            self.cutoy = int(params.kspaceradial.shape[0] / 2 * params.cutoutsidevalue / 100)
 
             if params.cutcenter == 1:
-                params.kspace[self.kspace_centery - self.cutcy:self.kspace_centery + self.cutcy, self.kspace_centerx - self.cutcx:self.kspace_centerx + self.cutcx] = 0
+                params.kspaceradial[self.kspace_centery - self.cutcy:self.kspace_centery + self.cutcy, self.kspace_centerx - self.cutcx:self.kspace_centerx + self.cutcx] = 0
 
             if params.cutoutside == 1:
-                params.kspace[0:self.cutoy, :] = 0
-                params.kspace[params.kspace.shape[0] - self.cutoy:params.kspace.shape[0], :] = 0
-                params.kspace[:, 0:self.cutox] = 0
-                params.kspace[:, params.kspace.shape[1] - self.cutox:params.kspace.shape[1]] = 0
+                params.kspaceradial[0:self.cutoy, :] = 0
+                params.kspaceradial[params.kspaceradial.shape[0] - self.cutoy:params.kspaceradial.shape[0], :] = 0
+                params.kspaceradial[:, 0:self.cutox] = 0
+                params.kspaceradial[:, params.kspaceradial.shape[1] - self.cutox:params.kspaceradial.shape[1]] = 0
 
         # Image calculations
-        self.k_amp_full = np.abs(params.kspace)
-        self.k_pha_full = np.angle(params.kspace)
-        I = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(params.kspace)))
+        self.k_amp_full = np.abs(params.kspaceradial)
+        self.k_pha_full = np.angle(params.kspaceradial)
+        I = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(params.kspaceradial)))
         self.img_mag_full = np.abs(I)
         self.img_pha_full = np.angle(I)
 
@@ -542,6 +566,7 @@ class process:
         if params.autorecenter == 1:
             params.motor_goto_position = params.motor_AC_position
             self.motor_move(motor=motor)
+            print('Settling for Autocenter...')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Settling for Autocenter...')
@@ -565,16 +590,16 @@ class process:
             params.frequency = params.centerfrequency
             params.frequencyoffset = self.frequencyoffset_temp
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
             params.motor_current_image_count = 0
             
@@ -585,6 +610,7 @@ class process:
                 if n > 0 and params.motor_AC_inbetween and (n)%params.motor_AC_inbetween_step == 0:
                     params.motor_goto_position = params.motor_AC_position
                     self.motor_move(motor=motor)
+                    print('Settling for Autocenter...')
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Settling for Autocenter...')
@@ -608,21 +634,21 @@ class process:
                     params.frequency = params.centerfrequency
                     params.frequencyoffset = self.frequencyoffset_temp
                     params.saveFileParameter()
-                    print('Autorecenter to:', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                 
                 params.motor_goto_position = motor_positions[n]
                 self.motor_move(motor=motor)
                 
-                print('Position: ', n + 1, '/', params.motor_image_count)
+                print('Position: ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 self.remaining_time = (self.estimated_time - n*params.motor_settling_time*1000 - n*params.nPE*((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -630,12 +656,14 @@ class process:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's\nSettling...')
+                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.motor_settling_time*1000)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep(params.motor_settling_time)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
+                    time.sleep(params.motor_settling_time)
 
                 seq.sequence_upload()
 
@@ -650,7 +678,7 @@ class process:
                 params.motor_goto_position = motor_positions[n]
                 self.motor_move(motor=motor)
                 
-                print('Position: ', n + 1, '/', params.motor_image_count)
+                print('Position: ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 self.remaining_time = (self.estimated_time - n*params.motor_settling_time*1000 - n*params.nPE*((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -658,12 +686,14 @@ class process:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's\nSettling...')
+                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.motor_settling_time*1000)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep(params.motor_settling_time)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
+                    time.sleep(params.motor_settling_time)
 
                 seq.sequence_upload()
 
@@ -702,6 +732,7 @@ class process:
         if params.autorecenter == 1:
             params.motor_goto_position = params.motor_AC_position
             self.motor_move(motor=motor)
+            print('Settling for Autocenter...')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Settling for Autocenter...')
@@ -726,16 +757,16 @@ class process:
             params.frequency = params.centerfrequency
             params.frequencyoffset = self.frequencyoffset_temp
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
             params.motor_current_image_count = 0
                         
@@ -746,6 +777,7 @@ class process:
                 if n > 0 and params.motor_AC_inbetween and (n)%params.motor_AC_inbetween_step == 0:
                     params.motor_goto_position = params.motor_AC_position
                     self.motor_move(motor=motor)
+                    print('Settling for Autocenter...')
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Settling for Autocenter...')
@@ -769,21 +801,21 @@ class process:
                     params.frequency = params.centerfrequency
                     params.frequencyoffset = self.frequencyoffset_temp
                     params.saveFileParameter()
-                    print('Autorecenter to:', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                 
                 params.motor_goto_position = motor_positions[n]
                 self.motor_move(motor=motor)
                 
-                print('Position: ', n + 1, '/', params.motor_image_count)
+                print('Position: ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 self.remaining_time = (self.estimated_time - n*params.motor_settling_time*1000 - n*params.nPE*((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -791,12 +823,14 @@ class process:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's\nSettling...')
+                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.motor_settling_time*1000)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep(params.motor_settling_time)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
+                    time.sleep(params.motor_settling_time)
 
                 seq.sequence_upload()
 
@@ -810,7 +844,7 @@ class process:
                 params.motor_goto_position = motor_positions[n]
                 self.motor_move(motor=motor)
                 
-                print('Position: ', n + 1, '/', params.motor_image_count)
+                print('Position: ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 self.remaining_time = (self.estimated_time - n*params.motor_settling_time*1000 - n*params.nPE*((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -818,12 +852,14 @@ class process:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's\nSettling...')
+                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.motor_settling_time*1000)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep(params.motor_settling_time)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
+                    time.sleep(params.motor_settling_time)
 
                 seq.sequence_upload()
 
@@ -862,6 +898,7 @@ class process:
         if params.autorecenter == 1:
             params.motor_goto_position = params.motor_AC_position
             self.motor_move(motor=motor)
+            print('Settling for Autocenter...')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Settling for Autocenter...')
@@ -885,16 +922,16 @@ class process:
             params.frequency = params.centerfrequency
             params.frequencyoffset = self.frequencyoffset_temp
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
             params.motor_current_image_count = 0
             
@@ -905,6 +942,7 @@ class process:
                 if n > 0 and params.motor_AC_inbetween and (n)%params.motor_AC_inbetween_step == 0:
                     params.motor_goto_position = params.motor_AC_position
                     self.motor_move(motor=motor)
+                    print('Settling for Autocenter...')
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Settling for Autocenter...')
@@ -928,21 +966,21 @@ class process:
                     params.frequency = params.centerfrequency
                     params.frequencyoffset = self.frequencyoffset_temp
                     params.saveFileParameter()
-                    print('Autorecenter to:', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                 
                 params.motor_goto_position = motor_positions[n]
                 self.motor_move(motor=motor)
                 
-                print('Position: ', n + 1, '/', params.motor_image_count)
+                print('Position: ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 self.remaining_time = (self.estimated_time - n*params.motor_settling_time*1000 - n*params.nPE*((100 + 2*params.flippulselength + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -950,12 +988,14 @@ class process:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's\nSettling...')
+                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.motor_settling_time*1000)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep(params.motor_settling_time)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
+                    time.sleep(params.motor_settling_time)
 
                 seq.sequence_upload()
 
@@ -970,7 +1010,7 @@ class process:
                 params.motor_goto_position = motor_positions[n]
                 self.motor_move(motor=motor)
                 
-                print('Position: ', n + 1, '/', params.motor_image_count)
+                print('Position: ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 self.remaining_time = (self.estimated_time - n*params.motor_settling_time*1000 - n*params.nPE*((100 + 2*params.flippulselength + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -978,12 +1018,14 @@ class process:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's\nSettling...')
+                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.motor_settling_time*1000)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep(params.motor_settling_time)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
+                    time.sleep(params.motor_settling_time)
 
                 seq.sequence_upload()
 
@@ -1022,6 +1064,7 @@ class process:
         if params.autorecenter == 1:
             params.motor_goto_position = params.motor_AC_position
             self.motor_move(motor=motor)
+            print('Settling for Autocenter...')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Settling for Autocenter...')
@@ -1046,16 +1089,16 @@ class process:
             params.frequency = params.centerfrequency
             params.frequencyoffset = self.frequencyoffset_temp
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
             params.motor_current_image_count = 0
             
@@ -1066,6 +1109,7 @@ class process:
                 if n > 0 and params.motor_AC_inbetween and (n)%params.motor_AC_inbetween_step == 0:
                     params.motor_goto_position = params.motor_AC_position
                     self.motor_move(motor=motor)
+                    print('Settling for Autocenter...')
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Settling for Autocenter...')
@@ -1089,21 +1133,21 @@ class process:
                     params.frequency = params.centerfrequency
                     params.frequencyoffset = self.frequencyoffset_temp
                     params.saveFileParameter()
-                    print('Autorecenter to:', params.frequency)
+                    print('Autorecenter to: ' + str(params.frequency) + 'MHz')
                     if params.measurement_time_dialog == 1:
                         msg_box = QMessageBox()
                         msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                         msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                        msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                         msg_box.button(QMessageBox.Ok).hide()
                         msg_box.exec()
-                    else: time.sleep((params.TR-100)/1000)
-                    time.sleep(0.1)
+                    else: time.sleep((params.TR-10)/1000)
+                    time.sleep(0.01)
                 
                 params.motor_goto_position = motor_positions[n]
                 self.motor_move(motor=motor)
                 
-                print('Position: ', n + 1, '/', params.motor_image_count)
+                print('Position: ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 self.remaining_time = (self.estimated_time - n*params.motor_settling_time*1000 - n*params.nPE*((100 + 2*params.flippulselength + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -1111,12 +1155,14 @@ class process:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's\nSettling...')
+                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.motor_settling_time*1000)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep(params.motor_settling_time)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
+                    time.sleep(params.motor_settling_time)
 
                 seq.sequence_upload()
 
@@ -1131,7 +1177,7 @@ class process:
                 params.motor_goto_position = motor_positions[n]
                 self.motor_move(motor=motor)
                 
-                print('Position: ', n + 1, '/', params.motor_image_count)
+                print('Position: ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 self.remaining_time = (self.estimated_time - n*params.motor_settling_time*1000 - n*params.nPE*((100 + 2*params.flippulselength + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -1139,12 +1185,14 @@ class process:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's\nSettling...')
+                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.motor_settling_time*1000)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep(params.motor_settling_time)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
+                    time.sleep(params.motor_settling_time)
 
                 seq.sequence_upload()
 
@@ -1184,7 +1232,7 @@ class process:
                 else:
                     params.datapath = (self.datapath_temp + '/Image_Stitching_' + str(params.motor_image_count - n))
 
-                print(n+1,'/',params.motor_image_count)
+                print('Processing... ' + str(n+1) + '/' + str(params.motor_image_count))
 
                 proc.image_process()
 
@@ -1222,7 +1270,7 @@ class process:
                 else:
                     params.datapath = (self.datapath_temp + '/Image_Stitching_' + str(params.motor_image_count - n))
                 
-                print(n+1,'/',params.motor_image_count)
+                print('Processing... ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 proc.image_process()
 
@@ -1248,7 +1296,7 @@ class process:
             for n in range(0, params.motor_image_count):
                 params.datapath = (self.datapath_temp + '/Image_Stitching_' + str(n + 1))
                 
-                print(n+1,'/',params.motor_image_count)
+                print('Processing... ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 proc.image_process()
 
@@ -1284,6 +1332,7 @@ class process:
         if params.autorecenter == 1:
             params.motor_goto_position = params.motor_AC_position
             self.motor_move(motor=motor)
+            print('Settling for Autocenter...')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Settling for Autocenter...')
@@ -1307,16 +1356,16 @@ class process:
             params.frequency = params.centerfrequency
             params.saveFileParameter()
             params.frequencyoffset = self.frequencyoffset_temp
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
             params.motor_current_image_count = 0
             
@@ -1335,12 +1384,14 @@ class process:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's\nSettling...')
+                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.motor_settling_time*1000)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep(params.motor_settling_time)
+                else:
+                    print('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
+                    time.sleep(params.motor_settling_time)
 
                 seq.sequence_upload()
 
@@ -1363,12 +1414,14 @@ class process:
                 self.remaining_time_s = int(self.remaining_time % 60)
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's\nSettling...')
+                    msg_box.setText('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.button(QMessageBox.Ok).animateClick(params.motor_settling_time*1000)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep(params.motor_settling_time)
+                else:
+                    print('Position: ' + str(n+1) + '/' + str(params.motor_image_count) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2) + '\nSettling...')
+                    time.sleep(params.motor_settling_time)
 
                 seq.sequence_upload()
 
@@ -1409,7 +1462,7 @@ class process:
                 else:
                     params.datapath = (self.datapath_temp + '/Image_Stitching_' + str(params.motor_image_count - n))
                 
-                print(n+1,'/',params.motor_image_count)
+                print('Processing... ' + str(n+1) + '/' + str(params.motor_image_count))
                 
                 proc.image_3D_process()
 
@@ -1653,7 +1706,7 @@ class process:
         self.estimated_time = self.ACidx * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
 
         for n in range(self.ACidx):
-            print(n + 1, '/', self.ACidx)
+            print('Measuring... ' + str(n+1) + '/' + str(self.ACidx))
             self.ACsteps[n] = round(self.ACsteps[n], 6)
             params.frequency = self.ACsteps[n]
             seq.sequence_upload()
@@ -1669,19 +1722,21 @@ class process:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.ACidx) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(self.ACidx) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.ACvalues[0, :] = self.ACsteps
         params.ACvalues[1, :] = self.ACpeakvalues
         params.Reffrequency = self.ACsteps[np.argmax(self.ACpeakvalues)]
 
-        np.savetxt('tooldata/Autocenter_Tool_Data.txt', np.transpose(params.ACvalues))
+        np.savetxt('data/Tool_data/Autocenter_data.txt', np.transpose(params.ACvalues))
         
         if params.toolautosequence == 1:
             params.GUImode = self.GUImode_temp
@@ -1698,7 +1753,7 @@ class process:
         params.datapath = self.datapath_temp
 
     def Flipangletool(self):
-        print('Finding flipangles...')
+        print('Finding RF attenuation...')
         
         self.datapath_temp = ''
         self.datapath_temp = params.datapath
@@ -1742,22 +1797,22 @@ class process:
         seq.sequence_upload()
         proc.spectrum_process()
         proc.spectrum_analytics()
+        print('Reset attenunator')
         if params.measurement_time_dialog == 1:
             msg_box = QMessageBox()
             msg_box.setText('Reset attenunator')
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+            msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
             msg_box.button(QMessageBox.Ok).hide()
             msg_box.exec()
-        else: time.sleep((params.TR-100)/1000)
-        time.sleep(0.1)
+        else: time.sleep((params.TR-10)/1000)
+        time.sleep(0.01)
         
         self.estimated_time = params.FAsteps * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
 
         for n in range(params.FAsteps):
-            print(n + 1, '/', params.FAsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(params.FAsteps))
             self.FAsteps[n] = int(self.FAsteps[n] / 0.25) * 0.25
-            print(self.FAsteps[n])
             params.RFattenuation = self.FAsteps[n]
             seq.sequence_upload()
             proc.spectrum_process()
@@ -1771,20 +1826,22 @@ class process:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.FAsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.FAsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.FAvalues[0, :] = self.FAsteps
         params.FAvalues[1, :] = self.FApeakvalues
 
         params.RefRFattenuation = self.FAsteps[np.argmax(self.FApeakvalues)]
 
-        np.savetxt('tooldata/Flipangle_Tool_Data.txt', np.transpose(params.FAvalues))
+        np.savetxt('data/Tool_data/Flipangle_data.txt', np.transpose(params.FAvalues))
         
         if params.toolautosequence == 1:
             params.GUImode = self.GUImode_temp
@@ -1798,6 +1855,97 @@ class process:
             proc.recalc_gradients()
 
         params.RFattenuation = self.RFattenuation_temp
+        params.datapath = self.datapath_temp
+        
+    def FAchecktool(self):
+        print('Finding RF attenuation...')
+        
+        self.datapath_temp = ''
+        self.datapath_temp = params.datapath
+        
+        params.datapath = 'rawdata/Tool_Spectrum_rawdata'
+        
+        if params.toolautosequence == 1:
+            self.GUImode_temp = 0
+            self.GUImode_temp = params.GUImode
+            self.sequence_temp = 0
+            self.sequence_temp = params.sequence
+            self.TS_temp = 0
+            self.TS_temp = params.TS
+            self.TE_temp = 0
+            self.TE_temp = params.TE
+            self.TR_temp = 0
+            self.TR_temp = params.TR
+            self.slicethickness_temp = 0
+            self.slicethickness_temp = params.slicethickness
+            self.frequencyoffset_temp = 0
+            self.frequencyoffset_temp = params.frequencyoffset
+            
+            params.GUImode = 0
+            params.sequence = 1
+            params.TS = 10
+            params.TE = 12
+            params.TR = 1000
+            params.slicethickness = 15
+            params.frequencyoffset = 0
+            
+            proc.recalc_gradients()
+
+        self.flippulseamplitude_temp = 0
+        self.flippulseamplitude_temp = params.flippulseamplitude
+
+
+        self.FAsteps = np.linspace(0, 2*self.flippulseamplitude_temp, 19)
+        params.FAvalues = np.matrix(np.zeros((2, 19)))
+        self.FApeakvalues = np.zeros(19)
+        
+        self.estimated_time = 19 * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
+
+        for n in range(19):
+            print('Measuring... ' + str(n+1) + '/19')
+            self.FAsteps[n] = int(self.FAsteps[n])
+            params.flippulseamplitude = int(self.FAsteps[n])
+            seq.sequence_upload()
+            proc.spectrum_process()
+            proc.spectrum_analytics()
+            self.FApeakvalues[n] = params.peakvalue
+            
+            self.remaining_time = (self.estimated_time - n * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
+            self.remaining_time_h = math.floor(self.remaining_time / (3600))
+            self.remaining_time_min = math.floor(self.remaining_time / 60)
+            self.remaining_time_s = int(self.remaining_time % 60)
+            
+            if params.measurement_time_dialog == 1:
+                msg_box = QMessageBox()
+                msg_box.setText('Measuring... ' + str(n+1) + '/19' + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                msg_box.setStandardButtons(QMessageBox.Ok)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
+                msg_box.button(QMessageBox.Ok).hide()
+                msg_box.exec()
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
+
+        params.FAvalues[0, :] = self.FAsteps
+        params.FAvalues[1, :] = self.FApeakvalues
+
+        params.RefRFattenuation = self.FAsteps[np.argmax(self.FApeakvalues)]
+
+        np.savetxt('data/Tool_data/Flip_Angle_Check_data.txt', np.transpose(params.FAvalues))
+        
+        if params.toolautosequence == 1:
+            params.GUImode = self.GUImode_temp
+            params.sequence = self.sequence_temp
+            params.TS = self.TS_temp
+            params.TE = self.TE_temp
+            params.TR = self.TR_temp
+            params.slicethickness = self.slicethickness_temp
+            params.frequencyoffset = self.frequencyoffset_temp
+            
+            proc.recalc_gradients()
+
+        params.flippulseamplitude = self.flippulseamplitude_temp
         params.datapath = self.datapath_temp
 
     def Shimtool(self):
@@ -1835,7 +1983,7 @@ class process:
                 params.TR = 500
             else:
                 params.TS = 30
-                params.TE = 33
+                params.TE = 34
                 params.TR = 2000
                 
             proc.recalc_gradients()
@@ -1848,44 +1996,47 @@ class process:
         self.STsteps = np.linspace(params.ToolShimStart, params.ToolShimStop, params.ToolShimSteps)
         self.STsteps = self.STsteps.astype(int)
 
-        params.STvalues = np.matrix(np.zeros((5, params.ToolShimSteps)))
+        params.STvalues = np.matrix(np.zeros((9, params.ToolShimSteps)))
         params.STvalues[0, :] = self.STsteps
 
         seq.sequence_upload()
         proc.spectrum_process()
         proc.spectrum_analytics()
         params.frequency = params.centerfrequency
+        print('Autorecenter to: ' + str(params.frequency) + 'MHz')
         if params.measurement_time_dialog == 1:
             msg_box = QMessageBox()
             msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+            msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
             msg_box.button(QMessageBox.Ok).hide()
             msg_box.exec()
-        else: time.sleep((params.TR-100)/1000)
-        time.sleep(0.1)
+        else: time.sleep((params.TR-10)/1000)
+        time.sleep(0.01)
 
         if params.ToolShimChannel[0] == 1:
             self.STpeakvaluesX = np.zeros(params.ToolShimSteps)
+            self.STcenterfrequeciesX = np.zeros(params.ToolShimSteps)
             params.grad[0] = self.STsteps[0]
 
             seq.sequence_upload()
             proc.spectrum_process()
             proc.spectrum_analytics()
+            print('X Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('X Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
             self.estimated_time = params.ToolShimSteps * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
 
             for n in range(params.ToolShimSteps):
-                print(n + 1, '/', params.ToolShimSteps)
+                print('X Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps))
                 params.grad[0] = self.STsteps[n]
                 params.frequency = params.centerfrequency
 
@@ -1893,6 +2044,7 @@ class process:
                 proc.spectrum_process()
                 proc.spectrum_analytics()
                 self.STpeakvaluesX[n] = params.peakvalue
+                self.STcenterfrequeciesX[n] = params.centerfrequency
                 
                 self.remaining_time = (self.estimated_time - n * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -1901,40 +2053,45 @@ class process:
             
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('X Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('X Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
-                    msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                    msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-100)/1000)
-                time.sleep(0.1)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
+                time.sleep(0.01)
 
             params.STvalues[1, :] = self.STpeakvaluesX
+            params.STvalues[5, :] = self.STcenterfrequeciesX
 
             params.frequency = self.frequency_temp
             params.grad[0] = self.shim_temp[0]
 
         if params.ToolShimChannel[1] == 1:
             self.STpeakvaluesY = np.zeros(params.ToolShimSteps)
+            self.STcenterfrequeciesY = np.zeros(params.ToolShimSteps)
             params.grad[1] = self.STsteps[0]
 
             seq.sequence_upload()
             proc.spectrum_process()
             proc.spectrum_analytics()
+            print('Y Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Y Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
             self.estimated_time = params.ToolShimSteps * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
 
             for n in range(params.ToolShimSteps):
-                print(n + 1, '/', params.ToolShimSteps)
+                print('Y Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps))
                 params.grad[1] = self.STsteps[n]
                 params.frequency = params.centerfrequency
 
@@ -1942,6 +2099,7 @@ class process:
                 proc.spectrum_process()
                 proc.spectrum_analytics()
                 self.STpeakvaluesY[n] = params.peakvalue
+                self.STcenterfrequeciesY[n] = params.centerfrequency
                 
                 self.remaining_time = (self.estimated_time - n * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -1950,40 +2108,45 @@ class process:
             
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Y Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('Y Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
-                    msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                    msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-100)/1000)
-                time.sleep(0.1)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
+                time.sleep(0.01)
 
             params.STvalues[2, :] = self.STpeakvaluesY
+            params.STvalues[6, :] = self.STcenterfrequeciesY
 
             params.frequency = self.frequency_temp
             params.grad[1] = self.shim_temp[1]
 
         if params.ToolShimChannel[2] == 1:
             self.STpeakvaluesZ = np.zeros(params.ToolShimSteps)
+            self.STcenterfrequeciesZ = np.zeros(params.ToolShimSteps)
             params.grad[2] = self.STsteps[0]
 
             seq.sequence_upload()
             proc.spectrum_process()
             proc.spectrum_analytics()
+            print('Z Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Z Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
             self.estimated_time = params.ToolShimSteps * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
 
             for n in range(params.ToolShimSteps):
-                print(n + 1, '/', params.ToolShimSteps)
+                print('Z Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps))
                 params.frequency = params.centerfrequency
                 params.grad[2] = self.STsteps[n]
 
@@ -1991,6 +2154,7 @@ class process:
                 proc.spectrum_process()
                 proc.spectrum_analytics()
                 self.STpeakvaluesZ[n] = params.peakvalue
+                self.STcenterfrequeciesZ[n] = params.centerfrequency
                 
                 self.remaining_time = (self.estimated_time - n * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -1999,40 +2163,45 @@ class process:
             
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Z Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('Z Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
-                    msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                    msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-100)/1000)
-                time.sleep(0.1)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
+                time.sleep(0.01)
 
             params.STvalues[3, :] = self.STpeakvaluesZ
+            params.STvalues[7, :] = self.STcenterfrequeciesZ
 
             params.frequency = self.frequency_temp
             params.grad[2] = self.shim_temp[2]
 
         if params.ToolShimChannel[3] == 1:
             self.STpeakvaluesZ2 = np.zeros(params.ToolShimSteps)
+            self.STcenterfrequeciesZ2 = np.zeros(params.ToolShimSteps)
             params.grad[3] = self.STsteps[0]
 
             seq.sequence_upload()
             proc.spectrum_process()
             proc.spectrum_analytics()
+            print('Z² Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Z² Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
             self.estimated_time = params.ToolShimSteps * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)
 
             for n in range(params.ToolShimSteps):
-                print(n + 1, '/', params.ToolShimSteps)
+                print('Z² Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps))
                 params.frequency = params.centerfrequency
                 params.grad[3] = self.STsteps[n]
 
@@ -2040,6 +2209,7 @@ class process:
                 proc.spectrum_process()
                 proc.spectrum_analytics()
                 self.STpeakvaluesZ2[n] = params.peakvalue
+                self.STcenterfrequeciesZ2[n] = params.centerfrequency
                 
                 self.remaining_time = (self.estimated_time - n * ((100 + params.flippulselength/2 + params.TE*1000 + (params.TS*1000)/2 + 400 + params.spoilertime) / 1000 + params.TR)) / 1000
                 self.remaining_time_h = math.floor(self.remaining_time / (3600))
@@ -2048,15 +2218,18 @@ class process:
             
                 if params.measurement_time_dialog == 1:
                     msg_box = QMessageBox()
-                    msg_box.setText('Z² Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                    msg_box.setText('Z² Measuring... ' + str(n+1) + '/' + str(params.ToolShimSteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                     msg_box.setStandardButtons(QMessageBox.Ok)
-                    msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                    msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                     msg_box.button(QMessageBox.Ok).hide()
                     msg_box.exec()
-                else: time.sleep((params.TR-100)/1000)
-                time.sleep(0.1)
+                else:
+                    print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                    time.sleep((params.TR-10)/1000)
+                time.sleep(0.01)
 
             params.STvalues[4, :] = self.STpeakvaluesZ2
+            params.STvalues[8, :] = self.STcenterfrequeciesZ2
 
             params.frequency = self.frequency_temp
             params.grad[3] = self.shim_temp[3]
@@ -2074,7 +2247,7 @@ class process:
             
         params.datapath = self.datapath_temp
 
-        np.savetxt('tooldata/Shim_Tool_Data.txt', np.transpose(params.STvalues))
+        np.savetxt('data/Tool_data/Shim_data.txt', np.transpose(params.STvalues))
 
     def FieldMapB0(self):
         print('Measuring B0 field...')
@@ -2124,9 +2297,6 @@ class process:
             proc.recalc_gradients()
         
         if params.autorecenter == 1:
-            self.frequencyoffset_temp = 0
-            self.frequencyoffset_temp = params.frequencyoffset
-            params.frequencyoffset = 0
             seq.RXconfig_upload()
             seq.Gradients_upload()
             seq.Frequency_upload()
@@ -2138,17 +2308,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to :', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
-            params.frequencyoffset = self.frequencyoffset_temp
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
         
         params.TE = 2 * params.TE
         params.datapath = 'rawdata/Tool_Image_rawdata'  
@@ -2203,9 +2372,6 @@ class process:
         params.datapath = 'rawdata/Tool_Spectrum_rawdata'
         
         if params.autorecenter == 1:
-            self.frequencyoffset_temp = 0
-            self.frequencyoffset_temp = params.frequencyoffset
-            params.frequencyoffset = 0
             seq.RXconfig_upload()
             seq.Gradients_upload()
             seq.Frequency_upload()
@@ -2217,17 +2383,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to :', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
-            params.frequencyoffset = self.frequencyoffset_temp
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.datapath = 'rawdata/Tool_Image_rawdata'
 
@@ -2281,11 +2446,11 @@ class process:
         params.B0DeltaB0mapmasked[params.img_mag < self.img_max * params.signalmask] = np.nan
 
         self.FieldMapB0_pha_raw = np.concatenate((self.FieldMapB0_S1_raw, self.FieldMapB0_S2_raw), axis=0)
-        np.savetxt('tooldata/FieldMap_B0_Phase_Raw_Data.txt', self.FieldMapB0_pha_raw)
+        np.savetxt('data/Tool_data/FieldMap_B0_Phase_rawdata.txt', self.FieldMapB0_pha_raw)
         self.FieldMapB0_pha = np.concatenate((self.FieldMapB0_S1, self.FieldMapB0_S2), axis=0)
-        np.savetxt('tooldata/FieldMap_B0_Phase_Data.txt', self.FieldMapB0_pha)
+        np.savetxt('data/Tool_data/FieldMap_B0_Phase_data.txt', self.FieldMapB0_pha)
         self.B0DeltaB0maps = np.concatenate((params.img_mag, params.B0DeltaB0map, params.B0DeltaB0mapmasked), axis=0)
-        np.savetxt('tooldata/FieldMap_B0_deltat1ms_Mag_Map_MapMasked_Data.txt', self.B0DeltaB0maps)
+        np.savetxt('data/Tool_data/FieldMap_B0_deltat1ms_Mag_Map_MapMasked_data.txt', self.B0DeltaB0maps)
         
         if params.toolautosequence == 1:
             params.TS = self.TS_temp
@@ -2349,9 +2514,6 @@ class process:
             proc.recalc_gradients()
         
         if params.autorecenter == 1:
-            self.frequencyoffset_temp = 0
-            self.frequencyoffset_temp = params.frequencyoffset
-            params.frequencyoffset = 0
             seq.RXconfig_upload()
             seq.Gradients_upload()
             seq.Frequency_upload()
@@ -2363,17 +2525,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to :', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
-            params.frequencyoffset = self.frequencyoffset_temp
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
         
         params.TE = 2 * params.TE
         params.datapath = 'rawdata/Tool_Image_rawdata'
@@ -2427,9 +2588,6 @@ class process:
         params.datapath = 'rawdata/Tool_Spectrum_rawdata'
         
         if params.autorecenter == 1:
-            self.frequencyoffset_temp = 0
-            self.frequencyoffset_temp = params.frequencyoffset
-            params.frequencyoffset = 0
             seq.RXconfig_upload()
             seq.Gradients_upload()
             seq.Frequency_upload()
@@ -2441,17 +2599,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to :', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
-            params.frequencyoffset = self.frequencyoffset_temp
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
         params.datapath = 'rawdata/Tool_Image_rawdata'
 
@@ -2505,11 +2662,11 @@ class process:
         params.B0DeltaB0mapmasked[params.img_mag < self.img_max * params.signalmask] = np.nan
 
         self.FieldMapB0_pha_raw = np.concatenate((self.FieldMapB0_S1_raw, self.FieldMapB0_S2_raw), axis=1)
-        np.savetxt('tooldata/FieldMap_B0_Phase_Raw_Data.txt', self.FieldMapB0_pha_raw)
+        np.savetxt('data/Tool_data/FieldMap_B0_Phase_rawdata.txt', self.FieldMapB0_pha_raw)
         self.FieldMapB0_pha = np.concatenate((self.FieldMapB0_S1, self.FieldMapB0_S2), axis=1)
-        np.savetxt('tooldata/FieldMap_B0_Phase_Data.txt', self.FieldMapB0_pha)
+        np.savetxt('data/Tool_data/FieldMap_B0_Phase_data.txt', self.FieldMapB0_pha)
         self.B0DeltaB0maps = np.concatenate((params.img_mag, params.B0DeltaB0map, params.B0DeltaB0mapmasked), axis=1)
-        np.savetxt('tooldata/FieldMap_B0_deltat1ms_Mag_Map_MapMasked_Data.txt', self.B0DeltaB0maps)
+        np.savetxt('data/Tool_data/FieldMap_B0_deltat1ms_Mag_Map_MapMasked_data.txt', self.B0DeltaB0maps)
         
         if params.toolautosequence == 1:
             params.TS = self.TS_temp
@@ -2574,9 +2731,6 @@ class process:
             proc.recalc_gradients()
         
         if params.autorecenter == 1:
-            self.frequencyoffset_temp = 0
-            self.frequencyoffset_temp = params.frequencyoffset
-            params.frequencyoffset = 0
             seq.RXconfig_upload()
             seq.Gradients_upload()
             seq.Frequency_upload()
@@ -2588,17 +2742,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to :', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
-            params.frequencyoffset = self.frequencyoffset_temp
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
         
         params.datapath = 'rawdata/Tool_Image_rawdata'
             
@@ -2613,9 +2766,6 @@ class process:
         params.datapath = 'rawdata/Tool_Spectrum_rawdata'
         
         if params.autorecenter == 1:
-            self.frequencyoffset_temp = 0
-            self.frequencyoffset_temp = params.frequencyoffset
-            params.frequencyoffset = 0
             seq.RXconfig_upload()
             seq.Gradients_upload()
             seq.Frequency_upload()
@@ -2627,17 +2777,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to :', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
-            params.frequencyoffset = self.frequencyoffset_temp
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.flipangleamplitude = params.flipangleamplitude * 2
         params.datapath = 'rawdata/Tool_Image_rawdata'
@@ -2657,9 +2806,9 @@ class process:
         params.B1alphamapmasked[params.img_mag < self.img_max * params.signalmask] = np.nan
 
         self.FieldMapB1_mag = np.concatenate((self.FieldMapB1_S1, self.FieldMapB1_S2), axis=1)
-        np.savetxt('tooldata/FieldMap_B1_Phase_Data.txt', self.FieldMapB1_mag)
+        np.savetxt('data/Tool_data/FieldMap_B1_Phase_data.txt', self.FieldMapB1_mag)
         self.B1alphamaps = np.concatenate((params.img_mag, params.B1alphamap, params.B1alphamapmasked), axis=1)
-        np.savetxt('tooldata/FieldMap_B1_alpha' + str(params.flipangleamplitude) + 'deg_Mag_Map_MapMasked_Data.txt', self.B1alphamaps)
+        np.savetxt('data/Tool_data/FieldMap_B1_alpha' + str(params.flipangleamplitude) + 'deg_Mag_Map_MapMasked_data.txt', self.B1alphamaps)
 
         if params.toolautosequence == 1:
             params.TS = self.TS_temp
@@ -2724,9 +2873,6 @@ class process:
             proc.recalc_gradients()
         
         if params.autorecenter == 1:
-            self.frequencyoffset_temp = 0
-            self.frequencyoffset_temp = params.frequencyoffset
-            params.frequencyoffset = 0
             seq.RXconfig_upload()
             seq.Gradients_upload()
             seq.Frequency_upload()
@@ -2738,17 +2884,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to :', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
-            params.frequencyoffset = self.frequencyoffset_temp
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.datapath = 'rawdata/Tool_Image_rawdata'
 
@@ -2763,9 +2908,6 @@ class process:
         params.datapath = 'rawdata/Tool_Spectrum_rawdata'
         
         if params.autorecenter == 1:
-            self.frequencyoffset_temp = 0
-            self.frequencyoffset_temp = params.frequencyoffset
-            params.frequencyoffset = 0
             seq.RXconfig_upload()
             seq.Gradients_upload()
             seq.Frequency_upload()
@@ -2777,17 +2919,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to :', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
-            params.frequencyoffset = self.frequencyoffset_temp
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.flipangleamplitude = params.flipangleamplitude * 2
         params.datapath = 'rawdata/Tool_Image_rawdata'
@@ -2807,9 +2948,9 @@ class process:
         params.B1alphamapmasked[params.img_mag < self.img_max * params.signalmask] = np.nan
 
         self.FieldMapB1_mag = np.concatenate((self.FieldMapB1_S1, self.FieldMapB1_S2), axis=1)
-        np.savetxt('tooldata/FieldMap_B1_Phase_Data.txt', self.FieldMapB1_mag)
+        np.savetxt('data/Tool_data/FieldMap_B1_Phase_data.txt', self.FieldMapB1_mag)
         self.B1alphamaps = np.concatenate((params.img_mag, params.B1alphamap, params.B1alphamapmasked), axis=1)
-        np.savetxt('tooldata/FieldMap_B1_alpha' + str(params.flipangleamplitude) + 'deg_Mag_Map_MapMasked_Data.txt', self.B1alphamaps)
+        np.savetxt('data/Tool_data/FieldMap_B1_alpha' + str(params.flipangleamplitude) + 'deg_Mag_Map_MapMasked_data.txt', self.B1alphamaps)
 
         if params.toolautosequence == 1:
             params.TS = self.TS_temp
@@ -2871,9 +3012,6 @@ class process:
             proc.recalc_gradients()
         
         if params.autorecenter == 1:
-            self.frequencyoffset_temp = 0
-            self.frequencyoffset_temp = params.frequencyoffset
-            params.frequencyoffset = 0
             seq.RXconfig_upload()
             seq.Gradients_upload()
             seq.Frequency_upload()
@@ -2885,17 +3023,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to :', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
-            params.frequencyoffset = self.frequencyoffset_temp
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
         
         params.datapath = 'rawdata/Tool_Image_rawdata'
                     
@@ -2963,9 +3100,6 @@ class process:
             proc.recalc_gradients()
         
         if params.autorecenter == 1:
-            self.frequencyoffset_temp = 0
-            self.frequencyoffset_temp = params.frequencyoffset
-            params.frequencyoffset = 0
             seq.RXconfig_upload()
             seq.Gradients_upload()
             seq.Frequency_upload()
@@ -2977,17 +3111,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
-            params.frequencyoffset = self.frequencyoffset_temp
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.datapath = 'rawdata/Tool_Image_rawdata'
 
@@ -3008,14 +3141,105 @@ class process:
         params.GUImode = self.GUImode_temp
         params.sequence = self.sequence_temp
         params.datapath = self.datapath_temp
+        
+    def PBMarkerCalProjection(self):
+        print('Patient bar Marker Calibration tool started...')
+
+        self.GUImode_temp = 0
+        self.GUImode_temp = params.GUImode
+        self.sequence_temp = 0
+        self.sequence_temp = params.sequence
+        self.datapath_temp = ''
+        self.datapath_temp = params.datapath
+        self.projaxis_temp = []
+        self.projaxis_temp[:] = params.projaxis[:]
+        params.GUImode = 4
+        params.sequence = 1
+        params.datapath = 'rawdata/Tool_Spectrum_rawdata'
+        params.projaxis[0] = 0
+        params.projaxis[1] = 1
+        params.projaxis[2] = 0
+        
+        if params.toolautosequence == 1:
+            self.TS_temp = 0
+            self.TS_temp = params.TS
+            self.TE_temp = 0
+            self.TE_temp = params.TE
+            self.TR_temp = 0
+            self.TR_temp = params.TR
+            self.frequencyoffset_temp = 0
+            self.frequencyoffset_temp = params.frequencyoffset
+            self.imageorientation_temp = 0
+            self.imageorientation_temp = params.imageorientation
+            self.nPE_temp = 0
+            self.nPE_temp = params.nPE
+            self.FOV_temp = 0
+            self.FOV_temp = params.FOV
+            
+            params.TS = 4
+            params.TE = 10
+            params.TR = 4000
+            params.frequencyoffset = 0
+            params.imageorientation = 1
+            params.nPE = 128
+            params.FOV = 22
+                    
+            proc.recalc_gradients()
+            
+        if params.autorecenter == 1:
+            params.frequencyoffset = 0
+            seq.RXconfig_upload()
+            seq.Gradients_upload()
+            seq.Frequency_upload()
+            seq.RFattenuation_upload()
+            seq.SE_setup()
+            seq.Sequence_upload()
+            seq.acquire_spectrum_SE()
+            proc.spectrum_process()
+            proc.spectrum_analytics()
+            params.frequency = params.centerfrequency
+            params.saveFileParameter()
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
+            if params.measurement_time_dialog == 1:
+                msg_box = QMessageBox()
+                msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
+                msg_box.setStandardButtons(QMessageBox.Ok)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
+                msg_box.button(QMessageBox.Ok).hide()
+                msg_box.exec()
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
+                    
+        seq.sequence_upload()
+        
+        params.datapath = params.datapath + '_1'
+        
+        proc.spectrum_process()
+        
+        if params.toolautosequence == 1:
+            params.TS = self.TS_temp
+            params.TE = self.TE_temp
+            params.TR = self.TR_temp
+            params.frequencyoffset = self.frequencyoffset_temp
+            params.imageorientation =self.imageorientation_temp
+            params.nPE = self.nPE_temp
+            params.FOV = self.FOV_temp
+            
+            proc.recalc_gradients()
+
+        params.GUImode = self.GUImode_temp
+        params.sequence = self.sequence_temp
+        params.datapath = self.datapath_temp
+        params.projaxis[:] = self.projaxis_temp[:]
 
     def T1measurement_IR_FID(self):
         print('Measuring T1 (FID)...')
 
         self.TI_temp = 0
         self.TI_temp = params.TI
-
-        self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
+        
+        if params.TIstepping == 1: self.T1steps = np.geomspace(params.TIstart, params.TIstop, params.TIsteps)
+        else: self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
         params.T1values = np.matrix(np.zeros((2, params.TIsteps)))
         self.T1peakvalues = np.zeros(params.TIsteps)
         
@@ -3030,18 +3254,19 @@ class process:
         seq.acquire_spectrum_FID()
         proc.spectrum_process()
         proc.spectrum_analytics()
+        print('Pre-measuring...')
         if params.measurement_time_dialog == 1:
             msg_box = QMessageBox()
             msg_box.setText('Pre-measuring...')
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+            msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
             msg_box.button(QMessageBox.Ok).hide()
             msg_box.exec()
-        else: time.sleep((params.TR-100)/1000)
-        time.sleep(0.1)
+        else: time.sleep((params.TR-10)/1000)
+        time.sleep(0.01)
 
         for n in range(params.TIsteps):
-            print(n + 1, '/', params.TIsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(params.TIsteps))
             self.T1steps[n] = round(self.T1steps[n], 1)
             params.TI = self.T1steps[n]
             # if params.SNR >= 100:
@@ -3065,13 +3290,15 @@ class process:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TIsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TIsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.T1values[0, :] = self.T1steps
         params.T1values[1, :] = self.T1peakvalues
@@ -3090,8 +3317,9 @@ class process:
 
         self.TI_temp = 0
         self.TI_temp = params.TI
-
-        self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
+        
+        if params.TIstepping == 1: self.T1steps = np.geomspace(params.TIstart, params.TIstop, params.TIsteps)
+        else: self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
         params.T1values = np.matrix(np.zeros((2, params.TIsteps)))
         self.T1peakvalues = np.zeros(params.TIsteps)
         
@@ -3106,18 +3334,19 @@ class process:
         seq.acquire_spectrum_SE()
         proc.spectrum_process()
         proc.spectrum_analytics()
+        print('Pre-measuring...')
         if params.measurement_time_dialog == 1:
             msg_box = QMessageBox()
             msg_box.setText('Pre-measuring...')
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+            msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
             msg_box.button(QMessageBox.Ok).hide()
             msg_box.exec()
-        else: time.sleep((params.TR-100)/1000)
-        time.sleep(0.1)
+        else: time.sleep((params.TR-10)/1000)
+        time.sleep(0.01)
 
         for n in range(params.TIsteps):
-            print(n + 1, '/', params.TIsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(params.TIsteps))
             self.T1steps[n] = round(self.T1steps[n], 1)
             params.TI = self.T1steps[n]
             # if params.SNR >= 100:
@@ -3141,13 +3370,15 @@ class process:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TIsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TIsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.T1values[0, :] = self.T1steps
         params.T1values[1, :] = self.T1peakvalues
@@ -3167,7 +3398,8 @@ class process:
         self.TI_temp = 0
         self.TI_temp = params.TI
 
-        self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
+        if params.TIstepping == 1: self.T1steps = np.geomspace(params.TIstart, params.TIstop, params.TIsteps)
+        else: self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
         params.T1values = np.matrix(np.zeros((2, params.TIsteps)))
         self.T1peakvalues = np.zeros(params.TIsteps)
         
@@ -3182,18 +3414,19 @@ class process:
         seq.acquire_spectrum_FID_Gs()
         proc.spectrum_process()
         proc.spectrum_analytics()
+        print('Pre-measuring...')
         if params.measurement_time_dialog == 1:
             msg_box = QMessageBox()
             msg_box.setText('Pre-measuring...')
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+            msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
             msg_box.button(QMessageBox.Ok).hide()
             msg_box.exec()
-        else: time.sleep((params.TR-100)/1000)
-        time.sleep(0.1)
+        else: time.sleep((params.TR-10)/1000)
+        time.sleep(0.01)
 
         for n in range(params.TIsteps):
-            print(n + 1, '/', params.TIsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(params.TIsteps))
             self.T1steps[n] = round(self.T1steps[n], 1)
             params.TI = self.T1steps[n]
             # if params.SNR >= 100:
@@ -3217,13 +3450,15 @@ class process:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TIsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TIsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.T1values[0, :] = self.T1steps
         params.T1values[1, :] = self.T1peakvalues
@@ -3243,7 +3478,8 @@ class process:
         self.TI_temp = 0
         self.TI_temp = params.TI
 
-        self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
+        if params.TIstepping == 1: self.T1steps = np.geomspace(params.TIstart, params.TIstop, params.TIsteps)
+        else: self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
         params.T1values = np.matrix(np.zeros((2, params.TIsteps)))
         self.T1peakvalues = np.zeros(params.TIsteps)
         
@@ -3258,18 +3494,19 @@ class process:
         seq.acquire_spectrum_SE_Gs()
         proc.spectrum_process()
         proc.spectrum_analytics()
+        print('Pre-measuring...')
         if params.measurement_time_dialog == 1:
             msg_box = QMessageBox()
             msg_box.setText('Pre-measuring...')
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+            msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
             msg_box.button(QMessageBox.Ok).hide()
             msg_box.exec()
-        else: time.sleep((params.TR-100)/1000)
-        time.sleep(0.1)
+        else: time.sleep((params.TR-10)/1000)
+        time.sleep(0.01)
 
         for n in range(params.TIsteps):
-            print(n + 1, '/', params.TIsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(params.TIsteps))
             self.T1steps[n] = round(self.T1steps[n], 1)
             params.TI = self.T1steps[n]
             # if params.SNR >= 100:
@@ -3293,13 +3530,15 @@ class process:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TIsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TIsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.T1values[0, :] = self.T1steps
         params.T1values[1, :] = self.T1peakvalues
@@ -3346,7 +3585,8 @@ class process:
         self.TI_temp = 0
         self.TI_temp = params.TI
 
-        self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
+        if params.TIstepping == 1: self.T1steps = np.geomspace(params.TIstart, params.TIstop, params.TIsteps)
+        else: self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
         params.T1stepsimg = np.zeros((params.TIsteps))
         params.T1img_mag = np.array(np.zeros((params.TIsteps, params.nPE, params.nPE)))
 
@@ -3362,16 +3602,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
             print(n + 1, '/', params.TIsteps)
             params.T1stepsimg[n] = round(self.T1steps[n], 1)
@@ -3403,7 +3643,8 @@ class process:
         self.TI_temp = 0
         self.TI_temp = params.TI
 
-        self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
+        if params.TIstepping == 1: self.T1steps = np.geomspace(params.TIstart, params.TIstop, params.TIsteps)
+        else: self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
         params.T1stepsimg = np.zeros((params.TIsteps))
         params.T1img_mag = np.array(np.zeros((params.TIsteps, params.nPE, params.nPE)))
 
@@ -3419,16 +3660,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
             print(n + 1, '/', params.TIsteps)
             params.T1stepsimg[n] = round(self.T1steps[n], 1)
@@ -3460,7 +3701,8 @@ class process:
         self.TI_temp = 0
         self.TI_temp = params.TI
 
-        self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
+        if params.TIstepping == 1: self.T1steps = np.geomspace(params.TIstart, params.TIstop, params.TIsteps)
+        else: self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
         params.T1stepsimg = np.zeros((params.TIsteps))
         params.T1img_mag = np.array(np.zeros((params.TIsteps, params.nPE, params.nPE)))
 
@@ -3476,16 +3718,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
             print(n + 1, '/', params.TIsteps)
             params.T1stepsimg[n] = round(self.T1steps[n], 1)
@@ -3518,7 +3760,8 @@ class process:
         self.TI_temp = 0
         self.TI_temp = params.TI
 
-        self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
+        if params.TIstepping == 1: self.T1steps = np.geomspace(params.TIstart, params.TIstop, params.TIsteps)
+        else: self.T1steps = np.linspace(params.TIstart, params.TIstop, params.TIsteps)
         params.T1stepsimg = np.zeros((params.TIsteps))
         params.T1img_mag = np.array(np.zeros((params.TIsteps, params.nPE, params.nPE)))
 
@@ -3534,16 +3777,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
             print(n + 1, '/', params.TIsteps)
             params.T1stepsimg[n] = round(self.T1steps[n], 1)
@@ -3614,7 +3857,8 @@ class process:
         self.TE_temp = 0
         self.TE_temp = params.TE
 
-        self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
+        if params.TEstepping == 1: self.T2steps = np.geomspace(params.TEstart, params.TEstop, params.TEsteps)
+        else: self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
         params.T2values = np.matrix(np.zeros((2, params.TEsteps)))
         self.T2peakvalues = np.zeros(params.TEsteps)
         
@@ -3629,18 +3873,19 @@ class process:
         seq.acquire_spectrum_SE()
         proc.spectrum_process()
         proc.spectrum_analytics()
+        print('Pre-measuring...')
         if params.measurement_time_dialog == 1:
             msg_box = QMessageBox()
             msg_box.setText('Pre-measuring...')
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+            msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
             msg_box.button(QMessageBox.Ok).hide()
             msg_box.exec()
-        else: time.sleep((params.TR-100)/1000)
-        time.sleep(0.1)
+        else: time.sleep((params.TR-10)/1000)
+        time.sleep(0.01)
 
         for n in range(params.TEsteps):
-            print(n + 1, '/', params.TEsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(params.TEsteps))
             self.T2steps[n] = round(self.T2steps[n], 1)
             params.TE = self.T2steps[n]
             # if params.SNR >= 100:
@@ -3664,13 +3909,15 @@ class process:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TEsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TEsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
             
 
         params.T2values[0, :] = self.T2steps
@@ -3691,7 +3938,8 @@ class process:
         self.SIR_TE_temp = 0
         self.SIR_TE_temp = params.SIR_TE
 
-        self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
+        if params.TEstepping == 1: self.T2steps = np.geomspace(params.TEstart, params.TEstop, params.TEsteps)
+        else: self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
         params.T2values = np.matrix(np.zeros((2, params.TEsteps)))
         self.T2peakvalues = np.zeros(params.TEsteps)
         
@@ -3706,18 +3954,19 @@ class process:
         seq.acquire_spectrum_SE()
         proc.spectrum_process()
         proc.spectrum_analytics()
+        pprint('Pre-measuring...')
         if params.measurement_time_dialog == 1:
             msg_box = QMessageBox()
             msg_box.setText('Pre-measuring...')
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+            msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
             msg_box.button(QMessageBox.Ok).hide()
             msg_box.exec()
-        else: time.sleep((params.TR-100)/1000)
-        time.sleep(0.1)
+        else: time.sleep((params.TR-10)/1000)
+        time.sleep(0.01)
 
         for n in range(params.TEsteps):
-            print(n + 1, '/', params.TEsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(params.TEsteps))
             self.T2steps[n] = round(self.T2steps[n], 1)
             params.SIR_TE = self.T2steps[n]
             # if params.SNR >= 100:
@@ -3741,13 +3990,15 @@ class process:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TEsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TEsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.T2values[0, :] = self.T2steps
         params.T2values[1, :] = self.T2peakvalues
@@ -3767,7 +4018,8 @@ class process:
         self.TE_temp = 0
         self.TE_temp = params.TE
 
-        self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
+        if params.TEstepping == 1: self.T2steps = np.geomspace(params.TEstart, params.TEstop, params.TEsteps)
+        else: self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
         params.T2values = np.matrix(np.zeros((2, params.TEsteps)))
         self.T2peakvalues = np.zeros(params.TEsteps)
         
@@ -3782,18 +4034,19 @@ class process:
         seq.acquire_spectrum_SE_Gs()
         proc.spectrum_process()
         proc.spectrum_analytics()
+        print('Pre-measuring...')
         if params.measurement_time_dialog == 1:
             msg_box = QMessageBox()
             msg_box.setText('Pre-measuring...')
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+            msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
             msg_box.button(QMessageBox.Ok).hide()
             msg_box.exec()
-        else: time.sleep((params.TR-100)/1000)
-        time.sleep(0.1)
+        else: time.sleep((params.TR-10)/1000)
+        time.sleep(0.01)
 
         for n in range(params.TEsteps):
-            print(n + 1, '/', params.TEsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(params.TEsteps))
             self.T2steps[n] = round(self.T2steps[n], 1)
             params.TE = self.T2steps[n]
             # if params.SNR >= 100:
@@ -3818,13 +4071,15 @@ class process:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TEsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TEsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else:
+                prier('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.T2values[0, :] = self.T2steps
         params.T2values[1, :] = self.T2peakvalues
@@ -3844,7 +4099,8 @@ class process:
         self.SIR_TE_temp = 0
         self.SIR_TE_temp = params.SIR_TE
 
-        self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
+        if params.TEstepping == 1: self.T2steps = np.geomspace(params.TEstart, params.TEstop, params.TEsteps)
+        else: self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
         params.T2values = np.matrix(np.zeros((2, params.TEsteps)))
         self.T2peakvalues = np.zeros(params.TEsteps)
         
@@ -3859,18 +4115,19 @@ class process:
         seq.acquire_spectrum_SE_Gs()
         proc.spectrum_process()
         proc.spectrum_analytics()
+        print('Pre-measuring...')
         if params.measurement_time_dialog == 1:
             msg_box = QMessageBox()
             msg_box.setText('Pre-measuring...')
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+            msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
             msg_box.button(QMessageBox.Ok).hide()
             msg_box.exec()
-        else: time.sleep((params.TR-100)/1000)
-        time.sleep(0.1)
+        else: time.sleep((params.TR-10)/1000)
+        time.sleep(0.01)
 
         for n in range(params.TEsteps):
-            print(n + 1, '/', params.TEsteps)
+            print('Measuring... ' + str(n+1) + '/' + str(params.TEsteps))
             self.T2steps[n] = round(self.T2steps[n], 1)
             params.SIR_TE = self.T2steps[n]
             # if params.SNR >= 100:
@@ -3894,13 +4151,15 @@ class process:
             
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
-                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TEsteps) + '\nRemaining time: ' + str(self.remaining_time_h) + 'h' + str(self.remaining_time_min) + 'min' + str(self.remaining_time_s) + 's')
+                msg_box.setText('Measuring... ' + str(n+1) + '/' + str(params.TEsteps) + '\nRemaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else:
+                print('Remaining time [h:min:s]: ' + str(self.remaining_time_h).zfill(2) + '.' + str(self.remaining_time_min).zfill(2) + ':' + str(self.remaining_time_s).zfill(2))
+                time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
         params.T2values[0, :] = self.T2steps
         params.T2values[1, :] = self.T2peakvalues
@@ -3923,8 +4182,8 @@ class process:
         params.T2yvalues = np.zeros(params.T2values.shape[1])
         params.T2xvalues[:] = params.T2values[0, :]
         params.T2yvalues[:] = np.log(params.T2values[1, :])
-
-        params.T2linregres = linregress(params.T2xvalues, params.T2yvalues)
+        
+        params.T2linregres = linregress(params.T2xvalues[:], params.T2yvalues[:])
         params.T2regyvalues = params.T2linregres.slope * params.T2xvalues + params.T2linregres.intercept
         params.T2 = round(-(1 / params.T2linregres.slope), 2)
 
@@ -3936,7 +4195,8 @@ class process:
         self.TE_temp = 0
         self.TE_temp = params.TE
 
-        self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
+        if params.TEstepping == 1: self.T2steps = np.geomspace(params.TEstart, params.TEstop, params.TEsteps)
+        else: self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
         params.T2stepsimg = np.zeros((params.TEsteps))
         params.T2img_mag = np.array(np.zeros((params.TEsteps, params.nPE, params.nPE)))
 
@@ -3953,16 +4213,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
             print(n + 1, '/', params.TEsteps)
             params.T2stepsimg[n] = round(self.T2steps[n], 1)
@@ -3997,7 +4257,8 @@ class process:
         self.SIR_TE_temp = 0
         self.SIR_TE_temp = params.SIR_TE
 
-        self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
+        if params.TEstepping == 1: self.T2steps = np.geomspace(params.TEstart, params.TEstop, params.TEsteps)
+        else: self.T2steps = np.linspace(params.TEstart, params.TEstop, params.TEsteps)
         params.T2stepsimg = np.zeros((params.TEsteps))
         params.T2img_mag = np.array(np.zeros((params.TEsteps, params.nPE, params.nPE)))
 
@@ -4014,16 +4275,16 @@ class process:
             proc.spectrum_analytics()
             params.frequency = params.centerfrequency
             params.saveFileParameter()
-            print('Autorecenter to:', params.frequency)
+            print('Autorecenter to: ' + str(params.frequency) + 'MHz')
             if params.measurement_time_dialog == 1:
                 msg_box = QMessageBox()
                 msg_box.setText('Autorecenter to: ' + str(params.frequency) + 'MHz')
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.button(QMessageBox.Ok).animateClick(params.TR-100)
+                msg_box.button(QMessageBox.Ok).animateClick(params.TR-10)
                 msg_box.button(QMessageBox.Ok).hide()
                 msg_box.exec()
-            else: time.sleep((params.TR-100)/1000)
-            time.sleep(0.1)
+            else: time.sleep((params.TR-10)/1000)
+            time.sleep(0.01)
 
             print(n + 1, '/', params.TEsteps)
             params.T2stepsimg[n] = round(self.T2steps[n], 1)
@@ -4079,6 +4340,23 @@ class process:
         params.T2imgvalues[params.T2img_mag[0, :, :] < self.img_max * params.signalmask] = np.nan
 
         print('T2 map calculated!')
+        
+    def set_agriMRI_folder_structure(self):
+        params.agriMRI_folder_structure = ''
+        
+        if params.experiment_ID != '':
+            params.agriMRI_folder_structure = params.experiment_ID
+            if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+            params.agriMRI_folder_structure = params.experiment_ID + '/'
+            if params.plant_ID != '':
+                params.agriMRI_folder_structure = params.experiment_ID + '/' + params.plant_ID
+                if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                params.agriMRI_folder_structure = params.experiment_ID + '/' + params.plant_ID + '/'
+                if params.plant_part_ID != '':
+                    params.agriMRI_folder_structure = params.experiment_ID + '/' + params.plant_ID + '/' + params.plant_part_ID
+                    if os.path.isdir(params.agriMRI_folder_structure) != True: os.mkdir(params.agriMRI_folder_structure)
+                    params.agriMRI_folder_structure = params.experiment_ID + '/' + params.plant_ID + '/' + params.plant_part_ID + '/'
+        else: params.agriMRI_folder_structure = 'rawdata/'
 
     def animation_image_cartesian_process(self):
 

@@ -36,5 +36,3 @@ Gslice [mT/m] = Delta_f / (42.57kHz/mT * slicethickness / 1000)
 		2mm, 200us > 117,45
 
 
-
-

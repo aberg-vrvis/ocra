@@ -41,8 +41,8 @@ PR 7, 400
 PR 3, 400	// Slice rephaser length
 GRADOFFSET 62
 PR 7, 210
-PR 3, 0	// Pause
-PR 4, 3000	// Sampling window
+PR 3, 780	// Pause
+PR 4, 20000	// Sampling window
 GRADOFFSET 82
 PR 8, 210
 PR 4, 1000	// Spoiler length

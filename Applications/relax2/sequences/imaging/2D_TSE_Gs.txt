@@ -41,7 +41,7 @@ PR 7, 400
 PR 3, 400	// Slice rephaser length
 GRADOFFSET 462
 PR 7, 210
-PR 3, 1055	// Pause
+PR 3, 2555	// Pause
 GRADOFFSET 482
 PR 7, 210
 PR 3, 400	// Crusher length
@@ -59,16 +59,16 @@ PR 7, 210
 PR 3, 310	// Pause
 GRADOFFSET 2
 PR 7, 210
-PR 3, 350	// Readout prephaser length
+PR 3, 850	// Readout prephaser length
 GRADOFFSET 22
 PR 7, 410
-PR 4, 2000	// Sampling window
+PR 4, 4000	// Sampling window
 GRADOFFSET 62
 PR 8, 210
 PR 4, 0
 GRADOFFSET 122
 PR 8, 210
-PR 4, 350	// Readout prephaser length
+PR 4, 850	// Readout prephaser length
 GRADOFFSET 142
 PR 8, 210
 PR 4, 295	// Pause
@@ -89,19 +89,19 @@ PR 8, 210
 PR 4, 300	// Pause
 GRADOFFSET 202
 PR 8, 210
-PR 4, 350	// Readout prephaser length
+PR 4, 850	// Readout prephaser length
 GRADOFFSET 222
 PR 8, 210
 PR 4, 0
 GRADOFFSET 82
 PR 8, 210
-PR 4, 2000	// Sampling window
+PR 4, 4000	// Sampling window
 GRADOFFSET 102
 PR 8, 210
 PR 4, 0
 GRADOFFSET 162
 PR 8, 210
-PR 4, 350	// Readout prephaser length
+PR 4, 850	// Readout prephaser length
 GRADOFFSET 182
 PR 8, 210
 PR 4, 300	// Pause
@@ -122,19 +122,19 @@ PR 8, 210
 PR 4, 300	// Pause
 GRADOFFSET 242
 PR 8, 210
-PR 4, 350	// Readout prephaser length
+PR 4, 850	// Readout prephaser length
 GRADOFFSET 262
 PR 8, 210
 PR 4, 0
 GRADOFFSET 42
 PR 8, 210
-PR 4, 2000	// Sampling window
+PR 4, 4000	// Sampling window
 GRADOFFSET 62
 PR 8, 210
 PR 4, 0
 GRADOFFSET 282
 PR 8, 210
-PR 4, 350	// Readout prephaser length
+PR 4, 850	// Readout prephaser length
 GRADOFFSET 302
 PR 8, 210
 PR 4, 300	// Pause
@@ -155,13 +155,13 @@ PR 8, 210
 PR 4, 295	// Pause
 GRADOFFSET 362
 PR 8, 210
-PR 4, 350	// Readout prephaser length
+PR 4, 850	// Readout prephaser length
 GRADOFFSET 382
 PR 8, 210
 PR 4, 0
 GRADOFFSET 82
 PR 8, 210
-PR 4, 2000	// Sampling window
+PR 4, 4000	// Sampling window
 GRADOFFSET 102
 PR 8, 210
 PR 4, 0

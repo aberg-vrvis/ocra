@@ -699,6 +699,27 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>Protocol_Datapath_lineEdit</tabstop>
+  <tabstop>Protocol_New_Protocol_pushButton</tabstop>
+  <tabstop>Protocol_Execute_Protocol_pushButton</tabstop>
+  <tabstop>Protocol_Table_tableWidget</tabstop>
+  <tabstop>Protocol_Add_pushButton</tabstop>
+  <tabstop>Protocol_Delete_Last_pushButton</tabstop>
+  <tabstop>Protocol_Number_spinBox</tabstop>
+  <tabstop>Protocol_Overwrite_pushButton</tabstop>
+  <tabstop>Protocol_Insert_pushButton</tabstop>
+  <tabstop>Protocol_Delete_pushButton</tabstop>
+  <tabstop>Protocol_Pause_doubleSpinBox</tabstop>
+  <tabstop>Protocol_Add_Pause_pushButton</tabstop>
+  <tabstop>Protocol_Insert_Pause_pushButton</tabstop>
+  <tabstop>Protocol_Message_comboBox</tabstop>
+  <tabstop>Protocol_Add_Message_pushButton</tabstop>
+  <tabstop>Protocol_Insert_Message_pushButton</tabstop>
+  <tabstop>Protocol_MoveTo_doubleSpinBox</tabstop>
+  <tabstop>Protocol_Add_MoveTo_pushButton</tabstop>
+  <tabstop>Protocol_Insert_MoveTo_pushButton</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
